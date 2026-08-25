@@ -1,17 +1,16 @@
-version: '3.8'
-
 services:
   # -------------------------------------------------------------------------
-  # 1. NEXT.JS FRONTEND & BACKEND APPLICATION
+  # 1. FTTH NEXT.JS APPLICATION (FRONTEND & BACKEND)
   # -------------------------------------------------------------------------
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: ftth_app
+    container_name: ftth_indotek_app
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      # Port 3005 di Host VM dipetakan ke Port 3000 di dalam container (bebas konflik)
+      - "3005:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -21,14 +20,14 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - ftth_network
+      - ftth_isolated_network
 
   # -------------------------------------------------------------------------
-  # 2. POSTGRESQL DATABASE (PERSISTENT DATA STORE)
+  # 2. FTTH POSTGRESQL DATABASE
   # -------------------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
-    container_name: ftth_postgres
+    container_name: ftth_indotek_postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: indotek_admin
@@ -36,10 +35,11 @@ services:
       POSTGRES_DB: ftth_db
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ftth_postgres_data:/var/lib/postgresql/data
       - ./init-db:/docker-entrypoint-initdb.d:ro
     ports:
-      - "5432:5432"
+      # Port 5435 di Host VM (agar tidak bentrok jika VM sudah ada PostgreSQL di 5432)
+      - "5435:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U indotek_admin -d ftth_db"]
       interval: 10s
@@ -47,28 +47,13 @@ services:
       retries: 5
       start_period: 10s
     networks:
-      - ftth_network
-
-  # -------------------------------------------------------------------------
-  # 3. NGINX REVERSE PROXY & COMPRESSION GATEWAY
-  # -------------------------------------------------------------------------
-  nginx:
-    image: nginx:alpine
-    container_name: ftth_nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - app
-    networks:
-      - ftth_network
+      - ftth_isolated_network
 
 networks:
-  ftth_network:
+  ftth_isolated_network:
+    name: ftth_isolated_network
     driver: bridge
 
 volumes:
-  postgres_data:
-    name: ftth_postgres_data
+  ftth_postgres_data:
+    name: ftth_indotek_postgres_data
