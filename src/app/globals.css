@@ -2,26 +2,121 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-app: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f1f5f9;
+  --border-app: #e2e8f0;
+  --border-subtle: #edf2f7;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-subtle: #94a3b8;
+  --primary: #0284c7;
+  --primary-hover: #0369a1;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --bg-app: #090d16;
+  --bg-surface: #0f172a;
+  --bg-subtle: #1e293b;
+  --border-app: #1e293b;
+  --border-subtle: #172033;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-subtle: #64748b;
+  --primary: #38bdf8;
+  --primary-hover: #0ea5e9;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text-main);
+  background-color: var(--bg-app);
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  min-height: 100vh;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+code, kbd, samp, pre, .font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Custom Minimalist Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45);
+}
+
+/* Crisp Clean Enterprise Panel */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: #e2e8f0;
+}
+
+.dark .glass-panel {
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: #1e293b;
+}
+
+/* Clean Enterprise Cards - Subtle, Matte & Sharp */
+.glass-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dark .glass-card {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.3);
+}
+
+.glass-card:hover {
+  border-color: #cbd5e1;
+}
+
+.dark .glass-card:hover {
+  border-color: #334155;
+}
+
+/* Spreadsheets */
+.spreadsheet-cell-input {
+  background: transparent;
+  width: 100%;
+  border-radius: 4px;
+  padding: 4px 8px;
+  transition: all 0.15s ease;
+}
+
+.spreadsheet-cell-input:focus {
+  background: #ffffff;
+  outline: none;
+  box-shadow: 0 0 0 2px #0284c7;
+}
+
+.dark .spreadsheet-cell-input:focus {
+  background: #0f172a;
+  box-shadow: 0 0 0 2px #38bdf8;
 }
