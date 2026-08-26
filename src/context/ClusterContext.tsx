@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   SPK,
+  Site,
   Vendor,
   Mandor,
   MandorPaymentRequest,
@@ -120,6 +121,17 @@ interface ClusterContextType {
   deletePriceCatalogItem: (id: string) => void;
   
   // Site Items CRUD
+  addSite: (
+    spkId: string,
+    siteData: {
+      name: string;
+      sowType: 'Distribusi' | 'Subfeeder' | 'Feeder' | 'Drop' | 'Other';
+      poAmount: number;
+      mandorId?: string;
+      mandorName?: string;
+    }
+  ) => void;
+  deleteSite: (spkId: string, siteId: string) => void;
   assignMandor: (spkId: string, siteId: string, mandorId: string) => void;
   updateServiceItem: (spkId: string, siteId: string, serviceId: string, updates: Partial<ServiceItem>) => void;
   addServiceItem: (spkId: string, siteId: string, item: Omit<ServiceItem, 'id' | 'siteId'>) => void;
@@ -406,6 +418,58 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const updateWorkflowStage = (spkId: string, stage: WorkflowStage) => {
     setSpks((prev) =>
       prev.map((s) => (s.id === spkId ? { ...s, workflowStage: stage } : s))
+    );
+  };
+
+  const addSite = (
+    spkId: string,
+    siteData: {
+      name: string;
+      sowType: 'Distribusi' | 'Subfeeder' | 'Feeder' | 'Drop' | 'Other';
+      poAmount: number;
+      mandorId?: string;
+      mandorName?: string;
+    }
+  ) => {
+    const siteId = `site-${Date.now()}`;
+    const newSite: Site = {
+      id: siteId,
+      spkId,
+      name: siteData.name,
+      sowType: siteData.sowType,
+      poAmount: siteData.poAmount || 0,
+      mandorId: siteData.mandorId || 'm1',
+      mandorName: siteData.mandorName || 'Mandor ADW Mandiri (Pak Fatrah)',
+      services: [],
+      materials: [],
+      permitItems: [],
+      paymentTerms: [
+        { id: `${siteId}-t1`, siteId, termNumber: 1, percentage: 30, amount: 0, isPaid: false, note: 'Termin 1 (DP)' },
+        { id: `${siteId}-t2`, siteId, termNumber: 2, percentage: 40, amount: 0, isPaid: false, note: 'Termin 2 (Progress)' },
+        { id: `${siteId}-t3`, siteId, termNumber: 3, percentage: 30, amount: 0, isPaid: false, note: 'Termin 3 (Pelunasan)' },
+      ],
+    };
+
+    setSpks((prev) =>
+      prev.map((spk) => {
+        if (spk.id !== spkId) return spk;
+        return {
+          ...spk,
+          sites: [...spk.sites, newSite],
+        };
+      })
+    );
+  };
+
+  const deleteSite = (spkId: string, siteId: string) => {
+    setSpks((prev) =>
+      prev.map((spk) => {
+        if (spk.id !== spkId) return spk;
+        return {
+          ...spk,
+          sites: spk.sites.filter((s) => s.id !== siteId),
+        };
+      })
     );
   };
 
@@ -1190,6 +1254,8 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addPriceCatalogItem,
         updatePriceCatalogItem,
         deletePriceCatalogItem,
+        addSite,
+        deleteSite,
         assignMandor,
         updateServiceItem,
         addServiceItem,

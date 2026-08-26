@@ -32,6 +32,7 @@ import {
   Check,
   ShoppingBag,
   Truck,
+  X,
 } from 'lucide-react';
 
 export const ClusterDetailView: React.FC = () => {
@@ -41,6 +42,8 @@ export const ClusterDetailView: React.FC = () => {
     paymentRequests,
     dailyReports,
     setActiveSpkId,
+    addSite,
+    deleteSite,
     assignMandor,
     updateWorkflowStage,
     updateServiceItem,
@@ -82,6 +85,13 @@ export const ClusterDetailView: React.FC = () => {
   // Finance Request Modal
   const [financeReqSite, setFinanceReqSite] = useState<CalculatedSite | null>(null);
   const [financeReqType, setFinanceReqType] = useState<PaymentRequestType>('TERMIN');
+
+  // Add Site Modal state
+  const [showAddSiteModal, setShowAddSiteModal] = useState(false);
+  const [newSiteName, setNewSiteName] = useState('');
+  const [newSiteSowType, setNewSiteSowType] = useState<'Distribusi' | 'Subfeeder' | 'Feeder' | 'Drop' | 'Other'>('Distribusi');
+  const [newSitePoAmount, setNewSitePoAmount] = useState<string | number>('');
+  const [newSiteMandorId, setNewSiteMandorId] = useState<string>('m1');
 
   // New item modal states
   const [showAddServiceModal, setShowAddServiceModal] = useState<string | null>(null);
@@ -465,15 +475,33 @@ export const ClusterDetailView: React.FC = () => {
       {activeTab === 'summary' && (
         <div className="space-y-6">
           <div className="rounded-2xl glass-card border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-            <div className="p-4 bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <div className="p-4 bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Rekapitulasi SPK / Site (Sesuai Format Sheet SUMMARY Excel)
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>Rekapitulasi SPK / Site (Sesuai Format Sheet SUMMARY Excel)</span>
+                  <span className="px-2 py-0.5 text-xs rounded-full bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 font-bold font-mono">
+                    {activeSpk.sites.length} Site
+                  </span>
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Perhitungan otomatis nilai PO Vendor, Jasa Mandor, Material, Perizinan, Progres Lapangan, dan Margin.
                 </p>
               </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setNewSiteName('');
+                  setNewSiteSowType('Distribusi');
+                  setNewSitePoAmount('');
+                  setNewSiteMandorId(mandors[0]?.id || 'm1');
+                  setShowAddSiteModal(true);
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-sky-600 hover:bg-sky-500 text-white shadow-md shadow-sky-600/20 active:scale-95 transition-all self-start sm:self-auto"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Tambah Site Baru</span>
+              </button>
             </div>
 
             <div className="overflow-x-auto">
@@ -486,6 +514,7 @@ export const ClusterDetailView: React.FC = () => {
                     <th className="p-2 border-r border-slate-200 dark:border-slate-800">Progress</th>
                     <th colSpan={4} className="p-2 border-r border-slate-200 dark:border-slate-800 bg-indigo-500/5">Payment Mandor</th>
                     <th colSpan={2} className="p-2 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400">Margin</th>
+                    <th className="p-2 border-l border-slate-200 dark:border-slate-800 text-center w-14">Aksi</th>
                   </tr>
                   <tr className="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800 text-right">
                     <th className="p-3 text-left">Vendor</th>
@@ -505,6 +534,7 @@ export const ClusterDetailView: React.FC = () => {
                     <th className="p-3 bg-indigo-500/10 text-rose-500">Pending</th>
                     <th className="p-3 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400">Margin (Rp)</th>
                     <th className="p-3 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-black text-center">Margin %</th>
+                    <th className="p-3 text-center border-l border-slate-200 dark:border-slate-800">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono">
@@ -523,9 +553,17 @@ export const ClusterDetailView: React.FC = () => {
                         </span>
                       </td>
                       <td className="p-3 font-sans">
-                        <span className="px-2 py-0.5 rounded bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 font-bold text-xs">
-                          {site.mandorName || 'Belum di-assign'}
-                        </span>
+                        <select
+                          value={site.mandorId || ''}
+                          onChange={(e) => assignMandor(activeSpk.id, site.id, e.target.value)}
+                          className="px-2 py-1 rounded-lg bg-sky-50 dark:bg-sky-950 text-sky-800 dark:text-sky-200 font-bold text-xs border border-sky-200 dark:border-sky-800 focus:outline-none"
+                        >
+                          {mandors.map((m) => (
+                            <option key={m.id} value={m.id} className="dark:bg-slate-900">
+                              {m.name}
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td className="p-3 font-bold text-slate-900 dark:text-white">
                         {formatIDR(site.poAmount)}
@@ -574,6 +612,20 @@ export const ClusterDetailView: React.FC = () => {
                           {formatPercent(site.marginPercent)}
                         </span>
                       </td>
+                      <td className="p-3 text-center border-l border-slate-200 dark:border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`Hapus site "${site.name}" beserta seluruh item pekerjaan dan materialnya?`)) {
+                              deleteSite(activeSpk.id, site.id);
+                            }
+                          }}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                          title="Hapus Site"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
                     </tr>
                   ))}
 
@@ -595,6 +647,7 @@ export const ClusterDetailView: React.FC = () => {
                     <td className="p-3 bg-indigo-500/20 text-rose-500">{formatIDR(activeSpk.pendingPayment)}</td>
                     <td className="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">{formatIDR(activeSpk.marginRp)}</td>
                     <td className="p-3 text-center bg-emerald-500/20 text-emerald-600 dark:text-emerald-300">{formatPercent(activeSpk.marginPercent)}</td>
+                    <td className="p-3 border-l border-slate-200 dark:border-slate-800"></td>
                   </tr>
                 </tbody>
               </table>
@@ -1824,6 +1877,145 @@ export const ClusterDetailView: React.FC = () => {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
       />
+
+      {/* ADD SITE MODAL */}
+      {showAddSiteModal && (
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowAddSiteModal(false);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150"
+        >
+          <div className="w-full max-w-lg rounded-3xl glass-card p-6 sm:p-7 space-y-5 shadow-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                    Tambah Site / Ruas Baru
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Cluster: <strong className="text-slate-800 dark:text-slate-200">{activeSpk.clusterName}</strong>
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowAddSiteModal(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!newSiteName.trim()) {
+                  alert('Nama Site / Rute Pekerjaan wajib diisi!');
+                  return;
+                }
+                const selectedMandor = mandors.find((m) => m.id === newSiteMandorId);
+                addSite(activeSpk.id, {
+                  name: newSiteName.trim(),
+                  sowType: newSiteSowType,
+                  poAmount: Number(newSitePoAmount) || 0,
+                  mandorId: newSiteMandorId,
+                  mandorName: selectedMandor?.name || 'Mandor Lapangan',
+                });
+                setShowAddSiteModal(false);
+                setNewSiteName('');
+                setNewSitePoAmount('');
+              }}
+              className="space-y-4 text-xs"
+            >
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Nama Site / Ruas Pekerjaan <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="mis. PULLING SUBFEEDER RUAS JALAN PEMALANG"
+                  value={newSiteName}
+                  onChange={(e) => setNewSiteName(e.target.value)}
+                  className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Tipe Scope (SOW)
+                  </label>
+                  <select
+                    value={newSiteSowType}
+                    onChange={(e: any) => setNewSiteSowType(e.target.value)}
+                    className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  >
+                    <option value="Distribusi">Distribusi</option>
+                    <option value="Subfeeder">Subfeeder</option>
+                    <option value="Feeder">Feeder</option>
+                    <option value="Drop">Drop Cable</option>
+                    <option value="Other">Other / Khusus</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Nilai PO dari Vendor (Rp)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="mis. 25000000"
+                    value={newSitePoAmount}
+                    onChange={(e) => setNewSitePoAmount(e.target.value)}
+                    className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Mandor Bertugas
+                </label>
+                <select
+                  value={newSiteMandorId}
+                  onChange={(e) => setNewSiteMandorId(e.target.value)}
+                  className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                >
+                  {mandors.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.specialization || m.area})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowAddSiteModal(false)}
+                  className="px-4 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 text-xs font-bold rounded-xl bg-sky-600 hover:bg-sky-500 text-white shadow-md shadow-sky-600/20 active:scale-95 transition-all"
+                >
+                  Simpan Site Baru
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
