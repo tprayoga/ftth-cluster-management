@@ -22,31 +22,31 @@ export async function GET() {
       usersRes,
       settingsRes,
     ] = await Promise.all([
-      query('SELECT data FROM spks ORDER BY updated_at DESC'),
-      query('SELECT data FROM price_catalog ORDER BY updated_at DESC'),
-      query('SELECT data FROM vendors ORDER BY updated_at DESC'),
-      query('SELECT data FROM mandors ORDER BY updated_at DESC'),
-      query('SELECT data FROM suppliers ORDER BY updated_at DESC'),
-      query('SELECT data FROM payment_requests ORDER BY updated_at DESC'),
-      query('SELECT data FROM daily_reports ORDER BY updated_at DESC'),
-      query('SELECT data FROM material_pos ORDER BY updated_at DESC'),
-      query('SELECT data FROM material_handovers ORDER BY updated_at DESC'),
-      query('SELECT data FROM approval_logs ORDER BY updated_at DESC'),
-      query('SELECT data FROM users ORDER BY updated_at DESC'),
+      query('SELECT data FROM spks WHERE data IS NOT NULL ORDER BY updated_at DESC'),
+      query('SELECT data FROM price_catalog WHERE data IS NOT NULL ORDER BY updated_at DESC'),
+      query('SELECT data FROM vendors WHERE data IS NOT NULL ORDER BY updated_at DESC'),
+      query('SELECT data FROM mandors WHERE data IS NOT NULL ORDER BY updated_at DESC'),
+      query('SELECT data FROM suppliers WHERE data IS NOT NULL ORDER BY updated_at DESC'),
+      query('SELECT data FROM payment_requests WHERE data IS NOT NULL ORDER BY updated_at DESC'),
+      query('SELECT data FROM daily_reports WHERE data IS NOT NULL ORDER BY updated_at DESC'),
+      query('SELECT data FROM material_pos WHERE data IS NOT NULL ORDER BY updated_at DESC'),
+      query('SELECT data FROM material_handovers WHERE data IS NOT NULL ORDER BY updated_at DESC'),
+      query('SELECT data FROM approval_logs WHERE data IS NOT NULL ORDER BY updated_at DESC'),
+      query('SELECT data FROM users WHERE data IS NOT NULL ORDER BY updated_at DESC'),
       query("SELECT value FROM app_settings WHERE key = 'approval_rules'"),
     ]);
 
-    const spks = spksRes.rows.map((r) => r.data);
-    const priceCatalog = catalogRes.rows.map((r) => r.data);
-    const vendors = vendorsRes.rows.map((r) => r.data);
-    const mandors = mandorsRes.rows.map((r) => r.data);
-    const suppliers = suppliersRes.rows.map((r) => r.data);
-    const paymentRequests = requestsRes.rows.map((r) => r.data);
-    const dailyReports = dprRes.rows.map((r) => r.data);
-    const materialPurchaseOrders = posRes.rows.map((r) => r.data);
-    const materialHandovers = handoversRes.rows.map((r) => r.data);
-    const approvalLogs = logsRes.rows.map((r) => r.data);
-    const users = usersRes.rows.map((r) => r.data);
+    const spks = spksRes.rows.map((r) => r.data).filter(Boolean);
+    const priceCatalog = catalogRes.rows.map((r) => r.data).filter(Boolean);
+    const vendors = vendorsRes.rows.map((r) => r.data).filter(Boolean);
+    const mandors = mandorsRes.rows.map((r) => r.data).filter(Boolean);
+    const suppliers = suppliersRes.rows.map((r) => r.data).filter(Boolean);
+    const paymentRequests = requestsRes.rows.map((r) => r.data).filter(Boolean);
+    const dailyReports = dprRes.rows.map((r) => r.data).filter(Boolean);
+    const materialPurchaseOrders = posRes.rows.map((r) => r.data).filter(Boolean);
+    const materialHandovers = handoversRes.rows.map((r) => r.data).filter(Boolean);
+    const approvalLogs = logsRes.rows.map((r) => r.data).filter(Boolean);
+    const users = usersRes.rows.map((r) => r.data).filter(Boolean);
     const approvalRules = settingsRes.rows[0]?.value || null;
 
     return NextResponse.json({
