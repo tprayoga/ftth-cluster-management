@@ -8,11 +8,13 @@ import { FinanceRequestModal } from '@/components/FinanceRequestModal';
 import { DailyProgressModal } from '@/components/DailyProgressModal';
 import { MaterialPurchaseOrderModal } from '@/components/MaterialPurchaseOrderModal';
 import { MaterialHandoverModal } from '@/components/MaterialHandoverModal';
+import { ExcelImportModal } from '@/components/ExcelImportModal';
 import { generateWhatsAppDailyReport } from '@/lib/dailyProgressHelper';
 import { CalculatedSite, WorkflowStage, PaymentRequestType } from '@/types';
 import {
   ArrowLeft,
   Download,
+  Upload,
   Plus,
   Trash2,
   FileSpreadsheet,
@@ -54,11 +56,13 @@ export const ClusterDetailView: React.FC = () => {
     priceCatalog,
     updatePriceCatalogItem,
     exportSPK,
+    downloadExcelTemplate,
   } = useCluster();
 
   const [activeTab, setActiveTab] = useState<'summary' | 'jasa' | 'material' | 'permit' | 'dpr' | 'catalog' | 'audit'>('summary');
   const [selectedSiteId, setSelectedSiteId] = useState<string>('all');
 
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isDprModalOpen, setIsDprModalOpen] = useState(false);
   const [copiedDprId, setCopiedDprId] = useState<string | null>(null);
 
@@ -228,7 +232,7 @@ export const ClusterDetailView: React.FC = () => {
         </div>
 
         {/* Action Buttons & Workflow Stage Selector */}
-        <div className="flex flex-wrap items-center gap-3 self-start lg:self-center">
+        <div className="flex flex-wrap items-center gap-2 self-start lg:self-center">
           <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
             <span className="text-[11px] font-bold px-2 text-slate-400">Workflow:</span>
             <select
@@ -244,11 +248,33 @@ export const ClusterDetailView: React.FC = () => {
             </select>
           </div>
 
+          {/* Unduh Template Excel */}
+          <button
+            onClick={downloadExcelTemplate}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors shadow-sm"
+            title="Unduh Template Excel 4-Sheet Standar FTTH"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" />
+            <span className="hidden sm:inline">Template Excel</span>
+          </button>
+
+          {/* Import Excel */}
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 shadow-sm transition-all active:scale-95"
+            title="Import Data BOQ Cluster dari Excel"
+          >
+            <Upload className="w-3.5 h-3.5 text-sky-500" />
+            <span>Import Excel</span>
+          </button>
+
+          {/* Export Excel */}
           <button
             onClick={() => exportSPK(activeSpk.id)}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20 transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20 transition-all active:scale-95"
+            title="Export Rincian BOQ Cluster ke Excel"
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-3.5 h-3.5" />
             <span>Export Excel</span>
           </button>
         </div>
@@ -1724,6 +1750,12 @@ export const ClusterDetailView: React.FC = () => {
           defaultType={financeReqType}
         />
       )}
+
+      {/* EXCEL IMPORT MODAL */}
+      <ExcelImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+      />
     </div>
   );
 };
