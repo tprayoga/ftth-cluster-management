@@ -15,6 +15,7 @@ import {
   Moon,
   Sun,
   RotateCcw,
+  RefreshCw,
   ChevronLeft,
   ChevronRight,
   HardHat,
@@ -49,6 +50,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     resetToDefaultData,
     downloadExcelTemplate,
     setActiveSpkId,
+    isDbConnected,
+    refreshData,
   } = useCluster();
 
   const pendingFinanceCount = paymentRequests.filter(
@@ -359,10 +362,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           {!isCollapsed && (
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span>v4.2 Online</span>
-            </div>
+            <button
+              onClick={() => refreshData()}
+              className={`flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md transition-colors ${
+                isDbConnected
+                  ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+                  : 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40'
+              }`}
+              title={`Database: ${isDbConnected ? 'PostgreSQL Terhubung (Sinkronisasi Aktif)' : 'Offline Cache'}. Klik untuk refresh data.`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${isDbConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+              <span>{isDbConnected ? 'PostgreSQL Live' : 'Offline'}</span>
+            </button>
           )}
         </div>
       </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   SPK,
   Site,
@@ -79,6 +79,9 @@ interface ClusterContextType {
   vendorFilter: string;
   scopeFilter: 'all' | ScopeType;
   isDarkMode: boolean;
+  isDbConnected: boolean;
+  lastSyncedAt: Date | null;
+  refreshData: () => Promise<void>;
   
   // Auth & User Management Actions
   login: (email: string, password?: string, role?: UserRole) => { success: boolean; message?: string };
@@ -231,6 +234,63 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [scopeFilter, setScopeFilter] = useState<'all' | ScopeType>('all');
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isDbConnected, setIsDbConnected] = useState<boolean>(true);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+
+  const syncEntity = useCallback(
+    async (action: 'upsert' | 'delete', entity: string, id: string, data?: any) => {
+      try {
+        const res = await fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, entity, id, data }),
+        });
+        if (res.ok) {
+          setIsDbConnected(true);
+          setLastSyncedAt(new Date());
+        }
+      } catch (err) {
+        console.warn(`Failed to sync ${entity} to PostgreSQL:`, err);
+        setIsDbConnected(false);
+      }
+    },
+    []
+  );
+
+  const fetchAllData = useCallback(async (isSilent = false) => {
+    try {
+      const res = await fetch('/api/data', { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP status ${res.status}`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        if (Array.isArray(json.data.spks)) setSpks(json.data.spks);
+        if (Array.isArray(json.data.priceCatalog)) setPriceCatalog(json.data.priceCatalog);
+        if (Array.isArray(json.data.vendors)) setVendors(json.data.vendors);
+        if (Array.isArray(json.data.mandors)) setMandors(json.data.mandors);
+        if (Array.isArray(json.data.suppliers)) setSuppliers(json.data.suppliers);
+        if (Array.isArray(json.data.paymentRequests)) setPaymentRequests(json.data.paymentRequests);
+        if (Array.isArray(json.data.dailyReports)) setDailyReports(json.data.dailyReports);
+        if (Array.isArray(json.data.materialPurchaseOrders)) setMaterialPurchaseOrders(json.data.materialPurchaseOrders);
+        if (Array.isArray(json.data.materialHandovers)) setMaterialHandovers(json.data.materialHandovers);
+        if (Array.isArray(json.data.approvalLogs)) setApprovalLogs(json.data.approvalLogs);
+        if (Array.isArray(json.data.users)) setUsers(json.data.users);
+        if (json.data.approvalRules) setApprovalRules(json.data.approvalRules);
+        setIsDbConnected(true);
+        setLastSyncedAt(new Date());
+      }
+    } catch (err) {
+      if (!isSilent) {
+        console.warn('Could not connect to PostgreSQL backend, using local cache:', err);
+      }
+      setIsDbConnected(false);
+    } finally {
+      setIsLoaded(true);
+    }
+  }, []);
+
+  const refreshData = useCallback(async () => {
+    await fetchAllData(false);
+  }, [fetchAllData]);
 
   const login = (email: string, password?: string, role?: UserRole): { success: boolean; message?: string } => {
     let matchedUser: UserProfile | undefined;
@@ -292,12 +352,16 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
       createdAt: new Date().toISOString().slice(0, 10),
     };
     setUsers((prev) => [...prev, newUser]);
+    syncEntity('upsert', 'user', newUser.id, newUser);
   };
 
   const updateUser = (id: string, updates: Partial<UserProfile>) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, ...updates } : u))
-    );
+    setUsers((prev) => {
+      const updated = prev.map((u) => (u.id === id ? { ...u, ...updates } : u));
+      const target = updated.find((u) => u.id === id);
+      if (target) syncEntity('upsert', 'user', id, target);
+      return updated;
+    });
     if (currentUser.id === id) {
       setCurrentUser((prev) => ({ ...prev, ...updates }));
     }
@@ -305,10 +369,15 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deleteUser = (id: string) => {
     setUsers((prev) => prev.filter((u) => u.id !== id));
+    syncEntity('delete', 'user', id);
   };
 
   const updateApprovalRules = (updates: Partial<ApprovalRulesConfig>) => {
-    setApprovalRules((prev) => ({ ...prev, ...updates }));
+    setApprovalRules((prev) => {
+      const updated = { ...prev, ...updates };
+      syncEntity('upsert', 'approvalRules', 'approval_rules', updated);
+      return updated;
+    });
   };
 
   const addApprovalLog = (log: Omit<ApprovalLog, 'id' | 'timestamp'>) => {
@@ -318,6 +387,7 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
       timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
     };
     setApprovalLogs((prev) => [newLog, ...prev]);
+    syncEntity('upsert', 'approvalLog', newLog.id, newLog);
   };
 
   useEffect(() => {
@@ -360,12 +430,30 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
       if (savedTheme !== null) setIsDarkMode(savedTheme === 'dark');
     } catch (e) {
-      console.error('Failed to load from localStorage', e);
-    } finally {
-      setIsLoaded(true);
+      console.error('Failed to load from localStorage cache', e);
     }
-  }, []);
 
+    // Fetch initial fresh data from PostgreSQL database
+    fetchAllData(true);
+
+    // Auto-refresh when tab/browser is focused
+    const handleFocus = () => {
+      fetchAllData(true);
+    };
+    window.addEventListener('focus', handleFocus);
+
+    // Periodically poll database every 15s for live multi-browser updates
+    const interval = setInterval(() => {
+      fetchAllData(true);
+    }, 15000);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
+  }, [fetchAllData]);
+
+  // Debounced backup sync to localStorage and PostgreSQL
   useEffect(() => {
     if (!isLoaded) return;
     try {
@@ -382,7 +470,7 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
       localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
       localStorage.setItem(STORAGE_KEY_APPROVAL_RULES, JSON.stringify(approvalRules));
     } catch (e) {
-      console.error('Failed to save to localStorage', e);
+      console.error('Failed to save to localStorage cache', e);
     }
   }, [spks, priceCatalog, mandors, vendors, suppliers, paymentRequests, dailyReports, materialPurchaseOrders, materialHandovers, approvalLogs, users, approvalRules, isLoaded]);
 
@@ -459,15 +547,18 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addSPK = (newSpk: SPK) => {
     setSpks((prev) => [newSpk, ...prev]);
     setActiveSpkId(newSpk.id);
+    syncEntity('upsert', 'spk', newSpk.id, newSpk);
   };
 
   const updateSPK = (updatedSpk: SPK) => {
     setSpks((prev) => prev.map((s) => (s.id === updatedSpk.id ? updatedSpk : s)));
+    syncEntity('upsert', 'spk', updatedSpk.id, updatedSpk);
   };
 
   const deleteSPK = (id: string) => {
     setSpks((prev) => prev.filter((s) => s.id !== id));
     if (activeSpkId === id) setActiveSpkId(null);
+    syncEntity('delete', 'spk', id);
   };
 
   const updateWorkflowStage = (spkId: string, stage: WorkflowStage) => {
@@ -890,18 +981,20 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deletePaymentRequest = (id: string) => {
     setPaymentRequests((prev) => prev.filter((r) => r.id !== id));
+    syncEntity('delete', 'paymentRequest', id);
   };
 
   // Daily Activity & Progress (DPR) Operations
   const addDailyReport = (report: DailyProgressReport, syncToSite: boolean = true) => {
     setDailyReports((prev) => [report, ...prev]);
+    syncEntity('upsert', 'dailyReport', report.id, report);
 
     // If syncToSite is true, update the site's services actual progress
     if (syncToSite && report.spkId && report.siteId) {
       setSpks((prev) =>
         prev.map((spk) => {
           if (spk.id !== report.spkId) return spk;
-          return {
+          const updatedSpk = {
             ...spk,
             sites: spk.sites.map((site) => {
               if (site.id !== report.siteId) return site;
@@ -928,6 +1021,8 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
               };
             }),
           };
+          syncEntity('upsert', 'spk', updatedSpk.id, updatedSpk);
+          return updatedSpk;
         })
       );
     }
@@ -935,10 +1030,12 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateDailyReport = (report: DailyProgressReport) => {
     setDailyReports((prev) => prev.map((d) => (d.id === report.id ? report : d)));
+    syncEntity('upsert', 'dailyReport', report.id, report);
   };
 
   const deleteDailyReport = (id: string) => {
     setDailyReports((prev) => prev.filter((d) => d.id !== id));
+    syncEntity('delete', 'dailyReport', id);
   };
 
   // Material Procurement & Handover Operations
@@ -955,6 +1052,7 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
       status: 'PENDING_APPROVAL',
     };
     setMaterialPurchaseOrders((prev) => [newPO, ...prev]);
+    syncEntity('upsert', 'materialPO', newPO.id, newPO);
   };
 
   const updateMaterialPOStatus = (
@@ -964,8 +1062,8 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
     paidAt?: string,
     deliveryOrderNo?: string
   ) => {
-    setMaterialPurchaseOrders((prev) =>
-      prev.map((po) => {
+    setMaterialPurchaseOrders((prev) => {
+      const updated = prev.map((po) => {
         if (po.id !== id) return po;
         const isApproved = status === 'APPROVED' || status === 'PAID';
         return {
@@ -977,12 +1075,16 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
           transferRef: transferRef || po.transferRef,
           deliveryOrderNo: deliveryOrderNo || po.deliveryOrderNo,
         };
-      })
-    );
+      });
+      const target = updated.find((p) => p.id === id);
+      if (target) syncEntity('upsert', 'materialPO', id, target);
+      return updated;
+    });
   };
 
   const deleteMaterialPO = (id: string) => {
     setMaterialPurchaseOrders((prev) => prev.filter((p) => p.id !== id));
+    syncEntity('delete', 'materialPO', id);
   };
 
   const createMaterialHandover = (
@@ -996,10 +1098,12 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
       suratJalanNo: sjNo,
     };
     setMaterialHandovers((prev) => [newHandover, ...prev]);
+    syncEntity('upsert', 'materialHandover', newHandover.id, newHandover);
   };
 
   const deleteMaterialHandover = (id: string) => {
     setMaterialHandovers((prev) => prev.filter((h) => h.id !== id));
+    syncEntity('delete', 'materialHandover', id);
   };
 
   const addRevisionLog = (spkId: string, log: Omit<RevisionLog, 'id'>) => {
@@ -1007,10 +1111,12 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setSpks((prev) =>
       prev.map((spk) => {
         if (spk.id !== spkId) return spk;
-        return {
+        const updated = {
           ...spk,
           revisionLogs: [newLog, ...(spk.revisionLogs || [])],
         };
+        syncEntity('upsert', 'spk', spk.id, updated);
+        return updated;
       })
     );
   };
@@ -1018,52 +1124,66 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Master Data CRUD Actions
   const addMandor = (mandor: Mandor) => {
     setMandors((prev) => [mandor, ...prev]);
+    syncEntity('upsert', 'mandor', mandor.id, mandor);
   };
 
   const updateMandor = (updatedMandor: Mandor) => {
     setMandors((prev) => prev.map((m) => (m.id === updatedMandor.id ? updatedMandor : m)));
+    syncEntity('upsert', 'mandor', updatedMandor.id, updatedMandor);
   };
 
   const deleteMandor = (id: string) => {
     setMandors((prev) => prev.filter((m) => m.id !== id));
+    syncEntity('delete', 'mandor', id);
   };
 
   const addVendor = (vendor: Vendor) => {
     setVendors((prev) => [vendor, ...prev]);
+    syncEntity('upsert', 'vendor', vendor.id, vendor);
   };
 
   const updateVendor = (updatedVendor: Vendor) => {
     setVendors((prev) => prev.map((v) => (v.id === updatedVendor.id ? updatedVendor : v)));
+    syncEntity('upsert', 'vendor', updatedVendor.id, updatedVendor);
   };
 
   const deleteVendor = (id: string) => {
     setVendors((prev) => prev.filter((v) => v.id !== id));
+    syncEntity('delete', 'vendor', id);
   };
 
   const addSupplier = (supplier: Supplier) => {
     setSuppliers((prev) => [supplier, ...prev]);
+    syncEntity('upsert', 'supplier', supplier.id, supplier);
   };
 
   const updateSupplier = (updatedSupplier: Supplier) => {
     setSuppliers((prev) => prev.map((s) => (s.id === updatedSupplier.id ? updatedSupplier : s)));
+    syncEntity('upsert', 'supplier', updatedSupplier.id, updatedSupplier);
   };
 
   const deleteSupplier = (id: string) => {
     setSuppliers((prev) => prev.filter((s) => s.id !== id));
+    syncEntity('delete', 'supplier', id);
   };
 
   const addPriceCatalogItem = (item: PriceCatalogItem) => {
     setPriceCatalog((prev) => [item, ...prev]);
+    syncEntity('upsert', 'priceCatalogItem', item.id, item);
   };
 
   const updatePriceCatalogItem = (id: string, updates: Partial<PriceCatalogItem>) => {
-    setPriceCatalog((prev) =>
-      prev.map((cat) => (cat.id === id ? { ...cat, ...updates } : cat))
-    );
+    setPriceCatalog((prev) => {
+      const updated = prev.map((cat) => (cat.id === id ? { ...cat, ...updates } : cat));
+      const target = updated.find((c) => c.id === id);
+      if (target) syncEntity('upsert', 'priceCatalogItem', id, target);
+      return updated;
+    });
   };
 
   const deletePriceCatalogItem = (id: string) => {
     setPriceCatalog((prev) => prev.filter((cat) => cat.id !== id));
+    syncEntity('delete', 'priceCatalogItem', id);
   };
 
   const importExcelFile = async (file: File): Promise<{ success: boolean; message: string; spkId?: string }> => {
@@ -1228,18 +1348,24 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const resetToDefaultData = () => {
-    setSpks(INITIAL_SPKS);
-    setPriceCatalog(INITIAL_PRICE_CATALOG);
-    setVendors(INITIAL_VENDORS);
-    setMandors(INITIAL_MANDORS);
-    setSuppliers(INITIAL_SUPPLIERS);
-    setPaymentRequests(INITIAL_PAYMENT_REQUESTS);
-    setDailyReports(INITIAL_DAILY_REPORTS);
-    setMaterialPurchaseOrders(INITIAL_MATERIAL_POS);
-    setMaterialHandovers(INITIAL_MATERIAL_HANDOVERS);
-    setApprovalLogs(INITIAL_APPROVAL_LOGS);
-    setCurrentUser(AVAILABLE_USERS[0]);
+  const resetToDefaultData = async () => {
+    try {
+      await fetch('/api/reset', { method: 'POST' });
+      await fetchAllData(false);
+    } catch (e) {
+      console.error('Reset database failed:', e);
+      setSpks(INITIAL_SPKS);
+      setPriceCatalog(INITIAL_PRICE_CATALOG);
+      setVendors(INITIAL_VENDORS);
+      setMandors(INITIAL_MANDORS);
+      setSuppliers(INITIAL_SUPPLIERS);
+      setPaymentRequests(INITIAL_PAYMENT_REQUESTS);
+      setDailyReports(INITIAL_DAILY_REPORTS);
+      setMaterialPurchaseOrders(INITIAL_MATERIAL_POS);
+      setMaterialHandovers(INITIAL_MATERIAL_HANDOVERS);
+      setApprovalLogs(INITIAL_APPROVAL_LOGS);
+      setCurrentUser(AVAILABLE_USERS[0]);
+    }
     localStorage.removeItem(STORAGE_KEY_SPKS);
     localStorage.removeItem(STORAGE_KEY_CATALOG);
     localStorage.removeItem(STORAGE_KEY_VENDORS);
@@ -1281,6 +1407,9 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
         vendorFilter,
         scopeFilter,
         isDarkMode,
+        isDbConnected,
+        lastSyncedAt,
+        refreshData,
         login,
         logout,
         hasPermission,
