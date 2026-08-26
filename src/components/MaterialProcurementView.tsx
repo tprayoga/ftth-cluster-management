@@ -34,6 +34,7 @@ export const MaterialProcurementView: React.FC = () => {
     spks,
     materialPurchaseOrders,
     materialHandovers,
+    dailyReports,
     updateMaterialPOStatus,
     deleteMaterialPO,
     deleteMaterialHandover,
@@ -48,48 +49,65 @@ export const MaterialProcurementView: React.FC = () => {
   const [isHandoverModalOpen, setIsHandoverModalOpen] = useState(false);
   const [selectedPoForVoucher, setSelectedPoForVoucher] = useState<MaterialPurchaseOrder | null>(null);
 
+  // Filtered dataset for KPIs according to selected cluster
+  const filteredSpksForKPI = selectedClusterFilter === 'ALL'
+    ? spks
+    : spks.filter((s) => s.id === selectedClusterFilter);
+
+  const filteredPOsForKPI = selectedClusterFilter === 'ALL'
+    ? materialPurchaseOrders
+    : materialPurchaseOrders.filter((po) => po.spkId === selectedClusterFilter);
+
   // Financial KPIs
-  const totalBudgetMaterial = spks.reduce((acc, spk) => {
+  const totalBudgetMaterial = filteredSpksForKPI.reduce((acc, spk) => {
     return (
       acc +
-      spk.sites.reduce((sAcc, site) => {
+      (spk.sites || []).reduce((sAcc, site) => {
         return (
           sAcc +
-          site.materials.reduce((mAcc, mat) => mAcc + (mat.qty * mat.unitPrice), 0)
+          (site.materials || []).reduce((mAcc, mat) => mAcc + (mat.qty * mat.unitPrice), 0)
         );
       }, 0)
     );
   }, 0);
 
-  const totalActualPoAmount = materialPurchaseOrders.reduce(
-    (acc, po) => acc + po.totalAmount,
-    0
-  );
+  const totalActualPoAmount = filteredPOsForKPI
+    .filter((po) => po.status !== 'REJECTED')
+    .reduce((acc, po) => acc + po.totalAmount, 0);
 
-  const totalPaidPoAmount = materialPurchaseOrders
+  const totalPaidPoAmount = filteredPOsForKPI
     .filter((po) => po.status === 'PAID' || po.status === 'RECEIVED_GUDANG')
     .reduce((acc, po) => acc + po.totalAmount, 0);
 
   const costSavings = totalBudgetMaterial - totalActualPoAmount;
   const savingsPercent = totalBudgetMaterial > 0 ? (costSavings / totalBudgetMaterial) * 100 : 0;
 
-  // Flattened materials across all sites/clusters for Inventory Matrix
+  // Flattened materials across all sites/clusters for Inventory Matrix (strictly dynamic from cluster data)
   const allClusterMaterials = spks.flatMap((spk) =>
-    spk.sites.flatMap((site) =>
-      site.materials.map((mat) => {
+    (spk.sites || []).flatMap((site) =>
+      (site.materials || []).map((mat) => {
         // Calculate total purchased for this material name across POs
         const totalPurchased = materialPurchaseOrders
-          .filter((po) => po.siteId === site.id)
-          .flatMap((po) => po.items)
-          .filter((item) => item.materialName.toLowerCase().includes(mat.name.toLowerCase()) || mat.name.toLowerCase().includes(item.materialName.toLowerCase()))
+          .filter((po) => po.siteId === site.id && po.status !== 'REJECTED')
+          .flatMap((po) => po.items || [])
+          .filter((item) => item.materialName.toLowerCase().trim() === mat.name.toLowerCase().trim())
           .reduce((sum, item) => sum + item.qty, 0);
 
         // Calculate total handed over to mandor
         const totalHandedOver = materialHandovers
           .filter((h) => h.siteId === site.id)
-          .flatMap((h) => h.items)
-          .filter((item) => item.materialName.toLowerCase().includes(mat.name.toLowerCase()) || mat.name.toLowerCase().includes(item.materialName.toLowerCase()))
+          .flatMap((h) => h.items || [])
+          .filter((item) => item.materialName.toLowerCase().trim() === mat.name.toLowerCase().trim())
           .reduce((sum, item) => sum + item.qty, 0);
+
+        // Calculate installed quantity from DPR
+        const installedDprQty = dailyReports
+          .filter((d) => d.siteId === site.id)
+          .flatMap((d) => d.items || [])
+          .filter((item) => item.itemName.toLowerCase().trim() === mat.name.toLowerCase().trim())
+          .reduce((sum, item) => sum + (item.totalActualQty || 0), 0);
+
+        const stockGudang = Math.max(0, totalPurchased - totalHandedOver);
 
         return {
           ...mat,
@@ -99,10 +117,10 @@ export const MaterialProcurementView: React.FC = () => {
           siteName: site.name,
           vendorName: spk.vendorName,
           mandorName: site.mandorName || 'Mandor Lapangan',
-          totalPurchased: totalPurchased || mat.qty,
-          totalHandedOver: totalHandedOver || Math.round(mat.qty * 0.8),
-          installedDprQty: Math.round(mat.qty * 0.6),
-          stockGudang: Math.max(0, (totalPurchased || mat.qty) - (totalHandedOver || Math.round(mat.qty * 0.8))),
+          totalPurchased,
+          totalHandedOver,
+          installedDprQty,
+          stockGudang,
         };
       })
     )
@@ -295,28 +313,27 @@ export const MaterialProcurementView: React.FC = () => {
         <div className="space-y-4">
           <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-xs flex items-center justify-between">
             <p className="text-amber-800 dark:text-amber-300 font-medium">
-              💡 <strong>Matriks Alur Material:</strong> Target BOQ $\rightarrow$ Dibeli dari Supplier $\rightarrow$ Diserahkan ke Mandor (Surat Jalan) $\rightarrow$ Terpasang di Lapangan (DPR) $\rightarrow$ Sisa Stok Gudang.
+              💡 <strong>Matriks Alur Material:</strong> Target BOQ → Dibeli dari Supplier (PO) → Diserahkan ke Mandor (Surat Jalan) → Terpasang di Lapangan (DPR) → Sisa Stok Gudang.
             </p>
           </div>
 
           <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl glass-card">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-xs border-collapse min-w-[1000px]">
               <thead>
                 <tr className="bg-slate-100/70 dark:bg-slate-800/60 font-bold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
-                  <th className="p-3">Cluster & Site</th>
-                  <th className="p-3">Nama Material / Aksesoris</th>
-                  <th className="p-3 text-right">Target BOQ</th>
-                  <th className="p-3 text-right text-amber-600">Total Dibeli</th>
-                  <th className="p-3 text-right text-sky-600">Diserahkan Mandor</th>
-                  <th className="p-3 text-right font-black text-emerald-600">Terpasang (DPR)</th>
-                  <th className="p-3 text-right font-bold text-indigo-600">Stok Gudang</th>
-                  <th className="p-3 text-right">Budget Estimasi</th>
-                  <th className="p-3 text-center">Status Pemenuhan</th>
+                  <th className="p-3 whitespace-nowrap">Cluster & Site</th>
+                  <th className="p-3 whitespace-nowrap">Nama Material / Aksesoris</th>
+                  <th className="p-3 text-right whitespace-nowrap">Target BOQ</th>
+                  <th className="p-3 text-right text-amber-600 whitespace-nowrap">Total Dibeli (PO)</th>
+                  <th className="p-3 text-right text-sky-600 whitespace-nowrap">Diserahkan Mandor</th>
+                  <th className="p-3 text-right font-black text-emerald-600 whitespace-nowrap">Terpasang (DPR)</th>
+                  <th className="p-3 text-right font-bold text-indigo-600 whitespace-nowrap">Stok Gudang</th>
+                  <th className="p-3 text-right whitespace-nowrap">Budget Estimasi</th>
+                  <th className="p-3 text-center whitespace-nowrap">Status Pemenuhan</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
                 {filteredMaterials.map((mat, idx) => {
-                  const isFullySupplied = mat.totalPurchased >= mat.qty;
                   return (
                     <tr key={`${mat.siteId}-${mat.id}-${idx}`} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                       <td className="p-3 font-sans">
@@ -335,38 +352,44 @@ export const MaterialProcurementView: React.FC = () => {
                         <span className="text-[10px] text-slate-400">Mandor: {mat.mandorName}</span>
                       </td>
 
-                      <td className="p-3 text-right font-bold text-slate-700 dark:text-slate-300">
+                      <td className="p-3 text-right font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                         {mat.qty} {mat.uom || 'Pcs'}
                       </td>
 
-                      <td className="p-3 text-right font-bold text-amber-600 dark:text-amber-400">
+                      <td className="p-3 text-right font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap">
                         {mat.totalPurchased}
                       </td>
 
-                      <td className="p-3 text-right font-bold text-sky-600 dark:text-sky-400">
+                      <td className="p-3 text-right font-bold text-sky-600 dark:text-sky-400 whitespace-nowrap">
                         {mat.totalHandedOver}
                       </td>
 
-                      <td className="p-3 text-right font-black text-emerald-600 dark:text-emerald-400">
+                      <td className="p-3 text-right font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                         {mat.installedDprQty}
                       </td>
 
-                      <td className="p-3 text-right font-bold text-indigo-600 dark:text-indigo-400">
+                      <td className="p-3 text-right font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
                         {mat.stockGudang}
                       </td>
 
-                      <td className="p-3 text-right text-slate-700 dark:text-slate-300">
+                      <td className="p-3 text-right text-slate-700 dark:text-slate-300 whitespace-nowrap">
                         {formatIDR(mat.qty * mat.unitPrice)}
                       </td>
 
-                      <td className="p-3 text-center font-sans">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          isFullySupplied
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                        }`}>
-                          {isFullySupplied ? 'Stok Terpenuhi ✅' : 'Perlu Tambahan Belanja ⚠️'}
-                        </span>
+                      <td className="p-3 text-center font-sans whitespace-nowrap">
+                        {mat.totalPurchased === 0 ? (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                            Belum Belanja (0%)
+                          </span>
+                        ) : mat.totalPurchased < mat.qty ? (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                            Sebagian ({Math.round((mat.totalPurchased / mat.qty) * 100)}%)
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                            Stok Terpenuhi ✓
+                          </span>
+                        )}
                       </td>
                     </tr>
                   );
