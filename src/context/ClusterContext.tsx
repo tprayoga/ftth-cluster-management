@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
   SPK,
   Site,
@@ -237,8 +237,12 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isDbConnected, setIsDbConnected] = useState<boolean>(true);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
+  const isMutatingRef = useRef(false);
+  const lastMutationTimeRef = useRef(0);
+
   const syncEntity = useCallback(
     async (action: 'upsert' | 'delete', entity: string, id: string, data?: any) => {
+      lastMutationTimeRef.current = Date.now();
       try {
         const res = await fetch('/api/sync', {
           method: 'POST',
@@ -258,6 +262,10 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 
   const fetchAllData = useCallback(async (isSilent = false) => {
+    // If local state was recently modified, do not overwrite with background poll
+    if (isSilent && (isMutatingRef.current || Date.now() - lastMutationTimeRef.current < 3000)) {
+      return;
+    }
     try {
       const res = await fetch('/api/data', { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP status ${res.status}`);
@@ -456,6 +464,9 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Debounced backup sync to localStorage and PostgreSQL
   useEffect(() => {
     if (!isLoaded) return;
+    lastMutationTimeRef.current = Date.now();
+
+    // 1. Instant local cache save
     try {
       localStorage.setItem(STORAGE_KEY_SPKS, JSON.stringify(spks));
       localStorage.setItem(STORAGE_KEY_CATALOG, JSON.stringify(priceCatalog));
@@ -472,6 +483,44 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (e) {
       console.error('Failed to save to localStorage cache', e);
     }
+
+    // 2. Debounced save to PostgreSQL /api/data
+    const saveTimer = setTimeout(async () => {
+      try {
+        isMutatingRef.current = true;
+        const res = await fetch('/api/data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            spks,
+            priceCatalog,
+            vendors,
+            mandors,
+            suppliers,
+            paymentRequests,
+            dailyReports,
+            materialPurchaseOrders,
+            materialHandovers,
+            approvalLogs,
+            users,
+            approvalRules,
+          }),
+        });
+        if (res.ok) {
+          setIsDbConnected(true);
+          setLastSyncedAt(new Date());
+        } else {
+          setIsDbConnected(false);
+        }
+      } catch (err) {
+        console.warn('Auto-sync to PostgreSQL failed:', err);
+        setIsDbConnected(false);
+      } finally {
+        isMutatingRef.current = false;
+      }
+    }, 500);
+
+    return () => clearTimeout(saveTimer);
   }, [spks, priceCatalog, mandors, vendors, suppliers, paymentRequests, dailyReports, materialPurchaseOrders, materialHandovers, approvalLogs, users, approvalRules, isLoaded]);
 
   useEffect(() => {
