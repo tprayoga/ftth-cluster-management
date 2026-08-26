@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useCluster } from '@/context/ClusterContext';
 import { formatIDR, formatPercent } from '@/lib/calculations';
-import { MandorPaymentRequest, PaymentRequestStatus } from '@/types';
+import { MandorPaymentRequest } from '@/types';
 import { FinanceVoucherModal } from '@/components/FinanceVoucherModal';
 import {
   Wallet,
@@ -19,6 +19,8 @@ import {
   XCircle,
   Check,
   Search,
+  Trash2,
+  X,
 } from 'lucide-react';
 
 export const FinancePaymentHub: React.FC = () => {
@@ -27,6 +29,7 @@ export const FinancePaymentHub: React.FC = () => {
     mandors,
     updatePaymentRequestStatus,
     deletePaymentRequest,
+    currentUser,
   } = useCluster();
 
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'PAID' | 'KASBON'>('ALL');
@@ -37,6 +40,8 @@ export const FinancePaymentHub: React.FC = () => {
   const [transferringReq, setTransferringReq] = useState<MandorPaymentRequest | null>(null);
   const [transferRef, setTransferRef] = useState(`TRF-${Math.floor(Math.random() * 90000000 + 10000000)}`);
   const [financeNote, setFinanceNote] = useState('Telah ditransfer via Internet Banking ke rekening Mandor');
+
+  const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
 
   // KPIs
   const totalPendingFinance = paymentRequests
@@ -82,6 +87,15 @@ export const FinancePaymentHub: React.FC = () => {
       new Date().toISOString().split('T')[0]
     );
     setTransferringReq(null);
+  };
+
+  const handleDeleteRequest = (id: string, reqNo: string) => {
+    if (confirm(`Hapus data pengajuan pembayaran "${reqNo}" secara permanen?`)) {
+      deletePaymentRequest(id);
+      if (selectedVoucherReq?.id === id) {
+        setSelectedVoucherReq(null);
+      }
+    }
   };
 
   return (
@@ -149,60 +163,60 @@ export const FinancePaymentHub: React.FC = () => {
           <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-2 font-mono">
             {formatIDR(totalPaidFinance)}
           </p>
-          <p className="text-xs text-slate-400 mt-2">Seluruh termin & kasbon yang telah ditransfer</p>
+          <p className="text-xs text-slate-400 mt-2">Total dana yang telah ditransfer ke rekening mandor</p>
         </div>
       </div>
 
-      {/* Mandor Kasbon Ledger Grid */}
-      <div className="p-5 rounded-2xl glass-card space-y-4">
+      {/* Mandors Ledger Strip */}
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <CreditCard className="w-4 h-4 text-sky-500" />
-            <span>Buku Besar Kasbon & Data Rekening Mandor</span>
-          </h3>
-          <span className="text-xs text-slate-400 font-mono">
-            {mandors.length} Mandor Terdaftar
-          </span>
+            <h3 className="font-bold text-slate-900 dark:text-white text-sm">
+              Buku Besar Kasbon & Data Rekening Mandor
+            </h3>
+          </div>
+          <span className="text-xs text-slate-400">{mandors.length} Mandor Terdaftar</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {mandors.map((m) => (
             <div
               key={m.id}
-              className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 text-xs"
+              className="p-4 rounded-xl glass-card border border-slate-200 dark:border-slate-800 space-y-2 text-xs"
             >
               <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="font-bold text-slate-900 dark:text-white">{m.name}</h4>
-                  <span className="text-[10px] text-slate-400 block">{m.specialization} ({m.area})</span>
-                </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                <strong className="text-slate-900 dark:text-white text-sm block">{m.name}</strong>
+                <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-500 font-mono">
                   {m.teamSize} Orang
                 </span>
               </div>
+              <p className="text-slate-400 text-[11px] truncate">{m.specialization} ({m.area})</p>
 
-              <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-1 text-[11px]">
-                <p className="text-slate-500">
-                  Bank: <strong className="text-slate-800 dark:text-slate-200">{m.bankName} - {m.accountNumber}</strong>
-                </p>
-                <p className="text-slate-500 truncate">a.n. {m.accountHolder}</p>
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-slate-400">Kasbon Aktif:</span>
-                  <span className={`font-mono font-black ${m.outstandingKasbon > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`}>
-                    {formatIDR(m.outstandingKasbon)}
-                  </span>
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1">
+                <div className="text-[11px] text-slate-500">
+                  <span>Bank: </span>
+                  <strong className="text-slate-700 dark:text-slate-300 font-mono">{m.bankName} - {m.accountNumber}</strong>
                 </div>
+                <div className="text-[11px] text-slate-400">a.n. {m.accountHolder}</div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between font-mono">
+                <span className="text-slate-500 text-[11px]">Kasbon Aktif:</span>
+                <span className={`font-bold ${m.outstandingKasbon > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`}>
+                  {formatIDR(m.outstandingKasbon)}
+                </span>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Payment Requests Table Section */}
-      <div className="rounded-2xl glass-card border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm space-y-4 p-5">
+      {/* Main Payment Requests Table */}
+      <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+            <h3 className="font-bold text-slate-900 dark:text-white text-base">
               Daftar Pengajuan Pembayaran Mandor (Payment Requests)
             </h3>
             <p className="text-xs text-slate-500">
@@ -210,56 +224,57 @@ export const FinancePaymentHub: React.FC = () => {
             </p>
           </div>
 
-          {/* Search & Filter pills */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Search */}
+            <div className="relative w-56">
               <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Cari no request, mandor..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 pr-3 py-1.5 text-xs rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
+                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none"
               />
             </div>
 
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg text-xs">
+            {/* Filter Pills */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl text-xs">
               <button
                 onClick={() => setStatusFilter('ALL')}
-                className={`px-2.5 py-1 font-bold rounded-md transition-all ${
+                className={`px-3 py-1 rounded-lg font-bold transition-all ${
                   statusFilter === 'ALL'
-                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
-                    : 'text-slate-500'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Semua ({paymentRequests.length})
               </button>
               <button
                 onClick={() => setStatusFilter('PENDING')}
-                className={`px-2.5 py-1 font-bold rounded-md transition-all ${
+                className={`px-3 py-1 rounded-lg font-bold transition-all ${
                   statusFilter === 'PENDING'
-                    ? 'bg-amber-600 text-white shadow-sm'
-                    : 'text-amber-600 dark:text-amber-400'
+                    ? 'bg-amber-500 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Pending ({pendingRequestsCount})
               </button>
               <button
                 onClick={() => setStatusFilter('PAID')}
-                className={`px-2.5 py-1 font-bold rounded-md transition-all ${
+                className={`px-3 py-1 rounded-lg font-bold transition-all ${
                   statusFilter === 'PAID'
                     ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-500'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Terbayar
               </button>
               <button
                 onClick={() => setStatusFilter('KASBON')}
-                className={`px-2.5 py-1 font-bold rounded-md transition-all ${
+                className={`px-3 py-1 rounded-lg font-bold transition-all ${
                   statusFilter === 'KASBON'
                     ? 'bg-purple-600 text-white shadow-sm'
-                    : 'text-slate-500'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Kasbon Saja
@@ -268,47 +283,42 @@ export const FinancePaymentHub: React.FC = () => {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
+        {/* Requests Table */}
+        <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl glass-card">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
+              <tr className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700">
                 <th className="p-3">No. Request & Tgl</th>
                 <th className="p-3">Cluster & Site</th>
                 <th className="p-3">Penerima (Mandor)</th>
-                <th className="p-3">Jenis Pengajuan</th>
+                <th className="p-3 text-center">Jenis Pengajuan</th>
                 <th className="p-3 text-right">Nilai Bruto</th>
                 <th className="p-3 text-right text-rose-500">Pot. Kasbon</th>
-                <th className="p-3 text-right font-black text-emerald-600">Net Transfer</th>
+                <th className="p-3 text-right text-emerald-600 font-bold">Net Transfer</th>
                 <th className="p-3 text-center">QC Progres</th>
                 <th className="p-3 text-center">Status</th>
                 <th className="p-3 text-center">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
               {filteredRequests.map((req) => (
-                <tr
-                  key={req.id}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors"
-                >
+                <tr key={req.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                   <td className="p-3 font-sans">
-                    <strong className="text-slate-900 dark:text-white font-mono block text-[11px]">
+                    <strong className="text-slate-900 dark:text-white font-mono text-xs block truncate max-w-[140px]">
                       {req.requestNo}
                     </strong>
                     <span className="text-[10px] text-slate-400">{req.submittedAt}</span>
                   </td>
 
                   <td className="p-3 font-sans">
-                    <span className="font-bold text-slate-800 dark:text-slate-200 block truncate max-w-[180px]">
+                    <strong className="text-slate-800 dark:text-slate-200 text-xs block truncate max-w-[180px]">
                       {req.clusterName}
-                    </span>
-                    <span className="text-[10px] text-slate-400 block truncate max-w-[180px]">
-                      {req.siteName}
-                    </span>
+                    </strong>
+                    <span className="text-[10px] text-slate-400 block truncate max-w-[180px]">{req.siteName}</span>
                   </td>
 
                   <td className="p-3 font-sans">
-                    <strong className="text-slate-900 dark:text-white block">
+                    <strong className="text-slate-900 dark:text-white block text-xs truncate max-w-[160px]">
                       {req.mandorName}
                     </strong>
                     <span className="text-[10px] text-slate-400 font-mono">
@@ -316,8 +326,8 @@ export const FinancePaymentHub: React.FC = () => {
                     </span>
                   </td>
 
-                  <td className="p-3 font-sans">
-                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${
+                  <td className="p-3 text-center font-sans">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                       req.type === 'KASBON'
                         ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                         : 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'
@@ -326,24 +336,28 @@ export const FinancePaymentHub: React.FC = () => {
                     </span>
                   </td>
 
-                  <td className="p-3 text-right font-semibold text-slate-800 dark:text-slate-200">
+                  <td className="p-3 text-right font-bold text-slate-800 dark:text-slate-200">
                     {formatIDR(req.requestedAmount)}
                   </td>
 
-                  <td className="p-3 text-right text-rose-500">
-                    {req.deductedKasbon > 0 ? `- ${formatIDR(req.deductedKasbon)}` : '-'}
+                  <td className="p-3 text-right text-rose-500 font-bold">
+                    {req.deductedKasbon > 0 ? `-${formatIDR(req.deductedKasbon)}` : '–'}
                   </td>
 
                   <td className="p-3 text-right font-black text-emerald-600 dark:text-emerald-400 text-sm">
                     {formatIDR(req.netTransferAmount)}
                   </td>
 
-                  <td className="p-3 text-center font-bold text-indigo-600">
-                    {formatPercent(req.verifiedProgressPercent, 1)}
+                  <td className="p-3 text-center">
+                    <span className={`font-bold ${
+                      req.verifiedProgressPercent >= 60 ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'
+                    }`}>
+                      {formatPercent(req.verifiedProgressPercent)}
+                    </span>
                   </td>
 
                   <td className="p-3 text-center font-sans">
-                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full uppercase ${
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                       req.status === 'PAID'
                         ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                         : req.status === 'APPROVED'
@@ -359,7 +373,7 @@ export const FinancePaymentHub: React.FC = () => {
                       {/* Cetak Voucher Button */}
                       <button
                         onClick={() => setSelectedVoucherReq(req)}
-                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"
+                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
                         title="Lihat & Cetak Voucher Pengajuan"
                       >
                         <FileText className="w-3.5 h-3.5" />
@@ -372,11 +386,22 @@ export const FinancePaymentHub: React.FC = () => {
                             setTransferringReq(req);
                             setTransferRef(`TRF-${Math.floor(Math.random() * 90000000 + 10000000)}`);
                           }}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] shadow-sm"
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] shadow-sm transition-all active:scale-95"
                           title="Tandai telah ditransfer oleh Finance"
                         >
                           <Check className="w-3 h-3" />
                           <span>Transfer</span>
+                        </button>
+                      )}
+
+                      {/* Super Admin Delete Button */}
+                      {isSuperAdmin && (
+                        <button
+                          onClick={() => handleDeleteRequest(req.id, req.requestNo)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                          title="Hapus Pengajuan (Super Admin)"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </div>
@@ -390,53 +415,79 @@ export const FinancePaymentHub: React.FC = () => {
 
       {/* FINANCE TRANSFER CONFIRMATION MODAL */}
       {transferringReq && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setTransferringReq(null);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-150"
+        >
           <div className="w-full max-w-md rounded-2xl glass-card p-6 space-y-4 shadow-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-              <span>Konfirmasi Transfer Finance</span>
-            </h3>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                <span>Konfirmasi Transfer Finance</span>
+              </h3>
+
+              <button
+                onClick={() => setTransferringReq(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs">
-              <p className="font-semibold text-slate-700 dark:text-slate-300">Penerima: <strong className="text-slate-900 dark:text-white">{transferringReq.mandorName}</strong></p>
-              <p className="text-slate-500 font-mono">Bank: {transferringReq.bankName} - {transferringReq.accountNumber}</p>
+              <p className="font-semibold text-slate-700 dark:text-slate-300">
+                Penerima: <strong className="text-slate-900 dark:text-white">{transferringReq.mandorName}</strong>
+              </p>
+              <p className="text-slate-500 font-mono">
+                Bank: {transferringReq.bankName} - {transferringReq.accountNumber}
+              </p>
               <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
                 <span className="text-slate-400">Total Transfer:</span>
-                <span className="text-base font-black text-emerald-600 font-mono">{formatIDR(transferringReq.netTransferAmount)}</span>
+                <span className="text-base font-black text-emerald-600 font-mono">
+                  {formatIDR(transferringReq.netTransferAmount)}
+                </span>
               </div>
             </div>
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Nomor Referensi Bank / Bukti Transfer</label>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Nomor Referensi Bank / Bukti Transfer
+                </label>
                 <input
                   type="text"
                   value={transferRef}
                   onChange={(e) => setTransferRef(e.target.value)}
-                  className="w-full p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-slate-900 dark:text-white"
+                  className="w-full p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
               <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Catatan Finance</label>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Catatan Finance
+                </label>
                 <input
                   type="text"
                   value={financeNote}
                   onChange={(e) => setFinanceNote(e.target.value)}
-                  className="w-full p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                  className="w-full p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
               <button
+                type="button"
                 onClick={() => setTransferringReq(null)}
-                className="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                className="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition-colors"
               >
                 Batal
               </button>
               <button
+                type="button"
                 onClick={handleConfirmTransfer}
-                className="px-5 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md"
+                className="px-5 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition-all active:scale-95"
               >
                 Simpan & Tandai Terbayar
               </button>
@@ -451,6 +502,7 @@ export const FinancePaymentHub: React.FC = () => {
           isOpen={true}
           onClose={() => setSelectedVoucherReq(null)}
           request={selectedVoucherReq}
+          onDelete={deletePaymentRequest}
         />
       )}
     </div>
