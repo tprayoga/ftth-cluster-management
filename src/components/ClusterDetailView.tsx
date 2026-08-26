@@ -57,6 +57,10 @@ export const ClusterDetailView: React.FC = () => {
     updatePriceCatalogItem,
     exportSPK,
     downloadExcelTemplate,
+    downloadJasaTemplate,
+    downloadMaterialTemplate,
+    importJasaExcelToSite,
+    importMaterialExcelToSite,
   } = useCluster();
 
   const [activeTab, setActiveTab] = useState<'summary' | 'jasa' | 'material' | 'permit' | 'dpr' | 'catalog' | 'audit'>('summary');
@@ -678,9 +682,41 @@ export const ClusterDetailView: React.FC = () => {
                     <span>Request Kasbon</span>
                   </button>
 
+                  {/* Download Template Jasa */}
+                  <button
+                    type="button"
+                    onClick={downloadJasaTemplate}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors shadow-sm"
+                    title="Download Template Excel Khusus Jasa Mandor (.xlsx)"
+                  >
+                    <Download className="w-3.5 h-3.5 text-sky-500" />
+                    <span>Template Jasa</span>
+                  </button>
+
+                  {/* Import Jasa Excel */}
+                  <label
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 shadow-sm transition-all cursor-pointer active:scale-95"
+                    title="Import Item Jasa dari File Excel"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-sky-500" />
+                    <span>Import Jasa</span>
+                    <input
+                      type="file"
+                      accept=".xlsx, .xls"
+                      className="hidden"
+                      onChange={async (e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const res = await importJasaExcelToSite(activeSpk.id, site.id, e.target.files[0]);
+                          alert(res.message);
+                          e.target.value = '';
+                        }
+                      }}
+                    />
+                  </label>
+
                   <button
                     onClick={() => setShowAddServiceModal(site.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-sky-600 hover:bg-sky-500 text-white shadow-sm"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-sky-600 hover:bg-sky-500 text-white shadow-sm transition-all active:scale-95"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>+ Item Jasa</span>
@@ -887,9 +923,41 @@ export const ClusterDetailView: React.FC = () => {
                     <span>+ Surat Jalan Mandor</span>
                   </button>
 
+                  {/* Download Template Material */}
+                  <button
+                    type="button"
+                    onClick={downloadMaterialTemplate}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors shadow-sm"
+                    title="Download Template Excel Khusus Material Aksesoris (.xlsx)"
+                  >
+                    <Download className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Template Material</span>
+                  </button>
+
+                  {/* Import Material Excel */}
+                  <label
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 shadow-sm transition-all cursor-pointer active:scale-95"
+                    title="Import Daftar Material dari File Excel"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Import Material</span>
+                    <input
+                      type="file"
+                      accept=".xlsx, .xls"
+                      className="hidden"
+                      onChange={async (e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const res = await importMaterialExcelToSite(activeSpk.id, site.id, e.target.files[0]);
+                          alert(res.message);
+                          e.target.value = '';
+                        }
+                      }}
+                    />
+                  </label>
+
                   <button
                     onClick={() => setShowAddMaterialModal(site.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-sky-600 hover:bg-sky-500 text-white shadow-sm"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-sky-600 hover:bg-sky-500 text-white shadow-sm transition-all active:scale-95"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Tambah Item</span>

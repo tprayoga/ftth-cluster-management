@@ -43,7 +43,15 @@ import {
   DEFAULT_APPROVAL_RULES,
 } from '@/lib/initialData';
 import { calculateSPK, calculatePortfolio } from '@/lib/calculations';
-import { parseFTTHExcel, exportSPKToExcel, generateExcelTemplate } from '@/lib/excelParser';
+import {
+  parseFTTHExcel,
+  exportSPKToExcel,
+  generateExcelTemplate,
+  generateJasaTemplate,
+  generateMaterialTemplate,
+  parseJasaItemsExcel,
+  parseMaterialItemsExcel,
+} from '@/lib/excelParser';
 
 interface ClusterContextType {
   spks: SPK[];
@@ -160,9 +168,13 @@ interface ClusterContextType {
   addRevisionLog: (spkId: string, log: Omit<RevisionLog, 'id'>) => void;
   
   importExcelFile: (file: File) => Promise<{ success: boolean; message: string; spkId?: string }>;
+  importJasaExcelToSite: (spkId: string, siteId: string, file: File) => Promise<{ success: boolean; message: string; count?: number }>;
+  importMaterialExcelToSite: (spkId: string, siteId: string, file: File) => Promise<{ success: boolean; message: string; count?: number }>;
   exportToExcel: (spkId: string) => void;
   exportSPK: (spkId: string) => void;
   downloadExcelTemplate: () => void;
+  downloadJasaTemplate: () => void;
+  downloadMaterialTemplate: () => void;
   resetToDefaultData: () => void;
 }
 
@@ -987,11 +999,111 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `TEMPLATE_FTTH_CLUSTER_INDOTEK.xlsx`;
+    a.download = `TEMPLATE_FTTH_CLUSTER_INDOTEK_FULL.xlsx`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const downloadJasaTemplate = () => {
+    const data = generateJasaTemplate();
+    const blob = new Blob([data as any], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `TEMPLATE_JASA_MANDOR_FTTH.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadMaterialTemplate = () => {
+    const data = generateMaterialTemplate();
+    const blob = new Blob([data as any], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `TEMPLATE_MATERIAL_AKSESORIS_FTTH.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const importJasaExcelToSite = async (
+    spkId: string,
+    siteId: string,
+    file: File
+  ): Promise<{ success: boolean; message: string; count?: number }> => {
+    try {
+      const buffer = await file.arrayBuffer();
+      const { items } = parseJasaItemsExcel(buffer);
+      if (items.length === 0) {
+        return { success: false, message: 'Tidak ada baris item jasa yang valid dalam file Excel ini.' };
+      }
+      setSpks((prev) =>
+        prev.map((spk) => {
+          if (spk.id !== spkId) return spk;
+          return {
+            ...spk,
+            sites: spk.sites.map((site) => {
+              if (site.id !== siteId) return site;
+              const newServices: ServiceItem[] = items.map((item, idx) => ({
+                ...item,
+                id: `${siteId}-jasa-imp-${Date.now()}-${idx}`,
+                siteId,
+              }));
+              return {
+                ...site,
+                services: [...site.services, ...newServices],
+              };
+            }),
+          };
+        })
+      );
+      return { success: true, message: `Berhasil mengimpor ${items.length} item jasa ke site!`, count: items.length };
+    } catch (err: any) {
+      return { success: false, message: `Gagal import jasa: ${err?.message || 'Format tidak valid'}` };
+    }
+  };
+
+  const importMaterialExcelToSite = async (
+    spkId: string,
+    siteId: string,
+    file: File
+  ): Promise<{ success: boolean; message: string; count?: number }> => {
+    try {
+      const buffer = await file.arrayBuffer();
+      const { items } = parseMaterialItemsExcel(buffer);
+      if (items.length === 0) {
+        return { success: false, message: 'Tidak ada baris material yang valid dalam file Excel ini.' };
+      }
+      setSpks((prev) =>
+        prev.map((spk) => {
+          if (spk.id !== spkId) return spk;
+          return {
+            ...spk,
+            sites: spk.sites.map((site) => {
+              if (site.id !== siteId) return site;
+              const newMaterials: MaterialItem[] = items.map((item, idx) => ({
+                ...item,
+                id: `${siteId}-mat-imp-${Date.now()}-${idx}`,
+                siteId,
+              }));
+              return {
+                ...site,
+                materials: [...site.materials, ...newMaterials],
+              };
+            }),
+          };
+        })
+      );
+      return { success: true, message: `Berhasil mengimpor ${items.length} item material ke site!`, count: items.length };
+    } catch (err: any) {
+      return { success: false, message: `Gagal import material: ${err?.message || 'Format tidak valid'}` };
+    }
   };
 
   const resetToDefaultData = () => {
@@ -1103,9 +1215,13 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deleteDailyReport,
         addRevisionLog,
         importExcelFile,
+        importJasaExcelToSite,
+        importMaterialExcelToSite,
         exportToExcel,
         exportSPK: exportToExcel,
         downloadExcelTemplate,
+        downloadJasaTemplate,
+        downloadMaterialTemplate,
         resetToDefaultData,
       }}
     >

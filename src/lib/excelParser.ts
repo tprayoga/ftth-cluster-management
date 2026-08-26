@@ -22,7 +22,6 @@ export function parseFTTHExcel(fileBuffer: ArrayBuffer, fileName: string): { spk
   let partnerName = 'ADW';
   let spkNumber = `SPK/${Date.now().toString().slice(-6)}/INDOTEK/FTTH/${new Date().getFullYear()}`;
   const notes: string[] = [];
-  const revisionLogs: SPK['revisionLogs'] = [];
 
   // 1. Parse ESTIMASI HARGA MATERIAL sheet if present
   const estSheetName = sheetNames.find((s) => s.toUpperCase().includes('ESTIMASI') || s.toUpperCase().includes('HARGA'));
@@ -88,7 +87,7 @@ export function parseFTTHExcel(fileBuffer: ArrayBuffer, fileName: string): { spk
   }
 
   // 3. Parse JASA sheet
-  const jasaSheetName = sheetNames.find((s) => s.toUpperCase() === 'JASA');
+  const jasaSheetName = sheetNames.find((s) => s.toUpperCase() === 'JASA' || s.toUpperCase().includes('JASA'));
   if (jasaSheetName) {
     const ws = workbook.Sheets[jasaSheetName];
     const data = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1 });
@@ -137,7 +136,7 @@ export function parseFTTHExcel(fileBuffer: ArrayBuffer, fileName: string): { spk
   }
 
   // 4. Parse MATERIAL sheet
-  const matSheetName = sheetNames.find((s) => s.toUpperCase() === 'MATERIAL');
+  const matSheetName = sheetNames.find((s) => s.toUpperCase() === 'MATERIAL' || s.toUpperCase().includes('MATERIAL'));
   if (matSheetName) {
     const ws = workbook.Sheets[matSheetName];
     const data = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1 });
@@ -169,7 +168,7 @@ export function parseFTTHExcel(fileBuffer: ArrayBuffer, fileName: string): { spk
             id: `m-import-${rowIdx}`,
             siteId: '',
             name: colD,
-            qty: colE || 0,
+            qty: colE || 1,
             unitPrice: colF || 0,
           });
         }
@@ -177,193 +176,253 @@ export function parseFTTHExcel(fileBuffer: ArrayBuffer, fileName: string): { spk
     });
   }
 
-  // Assemble sites
-  const spkId = `spk-${Date.now()}`;
-  const sites: Site[] = Array.from(sitesMap.entries()).map(([siteName, data], sIdx) => {
-    const siteId = `site-${spkId}-${sIdx + 1}`;
-    const sowType: Site['sowType'] = siteName.toUpperCase().includes('SUBFEEDER')
-      ? 'Subfeeder'
-      : siteName.toUpperCase().includes('FEEDER')
-      ? 'Feeder'
-      : 'Distribusi';
-
-    const services = data.services.map((s, i) => ({ ...s, siteId, id: `${siteId}-srv-${i + 1}` }));
-    const materials = data.materials.map((m, i) => ({ ...m, siteId, id: `${siteId}-mat-${i + 1}` }));
-
-    // Auto default payment term 1: 30% of total jasa
-    const totalJasa = services.reduce((sum, s) => sum + s.qty * s.unitPrice, 0);
-
-    return {
-      id: siteId,
-      spkId,
-      name: siteName,
-      sowType,
-      poAmount: data.poAmount,
-      services,
-      materials,
+  // Build final sites array
+  const sites: Site[] = [];
+  let siteIdx = 1;
+  sitesMap.forEach((val) => {
+    const sId = `site-${siteIdx}`;
+    sites.push({
+      id: sId,
+      spkId: '',
+      name: val.name,
+      sowType: val.name.toLowerCase().includes('subfeeder') ? 'Subfeeder' : val.name.toLowerCase().includes('feeder') ? 'Feeder' : 'Distribusi',
+      poAmount: val.poAmount,
+      services: val.services.map((s, i) => ({ ...s, id: `${sId}-svc-${i + 1}`, siteId: sId })),
+      materials: val.materials.map((m, i) => ({ ...m, id: `${sId}-mat-${i + 1}`, siteId: sId })),
+      permitItems: [],
       paymentTerms: [
-        {
-          id: `term-${siteId}-1`,
-          siteId,
-          termNumber: 1,
-          percentage: 30,
-          amount: Math.round(totalJasa * 0.3),
-          isPaid: true,
-          paidDate: new Date().toISOString().split('T')[0],
-          note: 'Termin 1 (30% Jasa)',
-        },
+        { id: `${sId}-t1`, siteId: sId, termNumber: 1, percentage: 30, amount: 0, isPaid: false, note: 'Termin 1 (DP)' },
+        { id: `${sId}-t2`, siteId: sId, termNumber: 2, percentage: 40, amount: 0, isPaid: false, note: 'Termin 2 (Progress)' },
+        { id: `${sId}-t3`, siteId: sId, termNumber: 3, percentage: 30, amount: 0, isPaid: false, note: 'Termin 3 (Pelunasan)' },
       ],
-    };
+      mandorId: 'm1',
+      mandorName: 'Mandor ADW Mandiri (Pak Fatrah)',
+    });
+    siteIdx++;
   });
+
+  const spkId = `spk-${Date.now()}`;
+  sites.forEach((s) => { s.spkId = spkId; });
 
   const spk: SPK = {
     id: spkId,
-    vendorId: 'vendor-ta',
-    vendorName: partnerName || 'Telkom / Telkom Akses (TA)',
-    scopeType: 'END_TO_END',
-    workflowStage: 'DRAFT_ESTIMASI',
+    vendorId: 'v1',
+    clusterName: clusterName.toUpperCase(),
+    vendorName: partnerName || 'Telkom Akses',
+    region: 'Jawa Tengah',
     spkNumber,
-    clusterName,
-    region: 'Central Java',
+    scopeType: 'IMPLEMENTATION_ONLY',
+    workflowStage: 'DRAFT_ESTIMASI',
     status: 'Draft',
-    createdAt: new Date().toISOString().split('T')[0],
-    targetCompletionDate: '30 Hari Kerja',
-    notes: notes.length > 0 ? notes : ['Cluster data diimpor dari file Excel'],
+    sites,
+    notes,
     revisionLogs: [
       {
-        id: `rev-${Date.now()}`,
-        version: 'v1',
+        id: `rev-1`,
+        version: 'v1.0',
+        author: 'Cost Estimator',
         date: new Date().toISOString().split('T')[0],
-        author: 'System Importer',
-        status: 'Imported',
-        note: `Data diimpor dari file ${fileName}`,
+        status: 'Imported from Excel',
+        note: `Imported from ${fileName}`,
       },
     ],
     signOffs: [
-      { role: 'Estimator', name: 'Estimator Team', date: new Date().toISOString().split('T')[0], status: 'Draft' },
+      { role: 'Estimator', name: 'Budhimansyah', date: new Date().toISOString().split('T')[0], status: 'Approved', note: 'BOQ Imported from Excel' },
     ],
-    sites,
+    createdAt: new Date().toISOString().split('T')[0],
   };
 
   return { spk, priceCatalog };
 }
 
 /**
- * Export calculated SPK into an Excel workbook with 4 sheets matching the company standard
+ * Parses a standalone JASA Excel file into ServiceItem array
  */
-export function exportSPKToExcel(calcSpk: CalculatedSPK): any {
-  const wb = XLSX.utils.book_new();
+export function parseJasaItemsExcel(fileBuffer: ArrayBuffer): { siteName?: string; items: Omit<ServiceItem, 'id' | 'siteId'>[] } {
+  const workbook = XLSX.read(fileBuffer, { type: 'array' });
+  const sheetName = workbook.SheetNames[0];
+  const ws = workbook.Sheets[sheetName];
+  const data = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1 });
 
-  // 1. SUMMARY SHEET
-  const summaryRows: any[][] = [
-    ['', 'SUMMARY ESTIMASI BIAYA & MARGIN CLUSTER FTTH', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-    ['', 'Vendor Utama', 'Nomor SPK', 'Site Name', 'Nilai PO Vendor', 'Eksternal', '', '', '', '', '', 'Progress', 'Payment Mandor', '', '', '', 'Margin', ''],
-    ['', '', '', '', '', 'Jasa Mandor', '% Jasa', 'Material', '% Material', 'Jumlah', '% Eksternal', '', 'Term 1 (30%)', 'Term 2', 'Term 3', 'Pending Payment', 'Margin (Rp)', 'Margin (%)'],
-  ];
+  let siteName: string | undefined = undefined;
+  const items: Omit<ServiceItem, 'id' | 'siteId'>[] = [];
 
-  calcSpk.sites.forEach((site) => {
-    summaryRows.push([
-      '',
-      calcSpk.vendorName,
-      calcSpk.spkNumber,
-      site.name,
-      site.poAmount,
-      site.totalJasa,
-      `${site.jasaRatio.toFixed(2)}%`,
-      site.totalMaterial,
-      `${site.materialRatio.toFixed(2)}%`,
-      site.totalEksternal,
-      `${site.costRatio.toFixed(2)}%`,
-      `${site.progressPercent.toFixed(2)}%`,
-      site.term1Amount,
-      site.term2Amount,
-      site.term3Amount,
-      site.pendingPayment,
-      site.marginRp,
-      `${site.marginPercent.toFixed(2)}%`,
-    ]);
+  data.forEach((row) => {
+    if (!row || row.length === 0) return;
+    
+    const colA = String(row[0] || '').trim();
+    const colB = String(row[1] || '').trim();
+    const colC = String(row[2] || '').trim();
+    const colD = row[3];
+    const colE = String(row[4] || '').trim();
+    const colF = row[5];
+    const colG = String(row[6] || '').trim();
+
+    if (colA.toLowerCase().includes('site') && colB) {
+      siteName = colB;
+    }
+
+    let name = '';
+    let qty = 1;
+    let uom = 'Meter';
+    let unitPrice = 0;
+    let remark = '';
+
+    if (colB && !colB.toLowerCase().includes('item') && !colB.toLowerCase().includes('deskripsi') && !colB.toLowerCase().includes('site')) {
+      name = colB;
+      qty = Number(colC) || Number(colD) || 1;
+      uom = colD && isNaN(Number(colD)) ? String(colD).trim() : colE || 'Set';
+      unitPrice = Number(colF) || Number(colE) || Number(colD) || 0;
+      remark = colG || '';
+    } else if (colC && !colC.toLowerCase().includes('item') && !colC.toLowerCase().includes('deskripsi')) {
+      name = colC;
+      qty = Number(colD) || 1;
+      uom = colE || 'Set';
+      unitPrice = Number(colF) || 0;
+      remark = colG || '';
+    }
+
+    if (name && name.length >= 3 && !name.toLowerCase().includes('total')) {
+      const isNegosiasi = name.toLowerCase().includes('negosiasi') || uom.toLowerCase() === 'lot';
+      items.push({
+        name,
+        qty: qty || 1,
+        uom: uom || (isNegosiasi ? 'Lot' : 'Set'),
+        unitPrice: unitPrice || 0,
+        remark,
+        actualProgress: 0,
+        isNegosiasi,
+      });
+    }
   });
 
-  // Total summary row
-  summaryRows.push([
-    '',
-    `Jumlah ${calcSpk.sites.length} Site`,
-    '',
-    '',
-    calcSpk.totalPO,
-    calcSpk.totalJasa,
-    `${((calcSpk.totalJasa / (calcSpk.totalPO || 1)) * 100).toFixed(2)}%`,
-    calcSpk.totalMaterial,
-    `${((calcSpk.totalMaterial / (calcSpk.totalPO || 1)) * 100).toFixed(2)}%`,
-    calcSpk.totalEksternal,
-    `${calcSpk.costRatio.toFixed(2)}%`,
-    `${calcSpk.avgProgress.toFixed(2)}%`,
-    calcSpk.totalPaid,
-    0,
-    0,
-    calcSpk.pendingPayment,
-    calcSpk.marginRp,
-    `${calcSpk.marginPercent.toFixed(2)}%`,
-  ]);
-
-  // Add notes & logs
-  summaryRows.push([]);
-  summaryRows.push(['', 'Catatan / Notes:']);
-  calcSpk.notes.forEach((n) => summaryRows.push(['', '', n]));
-
-  const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
-  XLSX.utils.book_append_sheet(wb, wsSummary, 'SUMMARY');
-
-  // 2. JASA SHEET
-  const jasaRows: any[][] = [];
-  calcSpk.sites.forEach((site) => {
-    jasaRows.push(['', 'Site Name', '', 'Item', 'Qty', 'UOM', 'Harga Mitra', 'Total Mitra', 'Remark Mitra', '', 'Actual Progres', 'Persentase Progress', 'Keterangan']);
-    jasaRows.push(['', site.name]);
-    site.services.forEach((srv) => {
-      jasaRows.push([
-        '',
-        '',
-        '',
-        srv.name,
-        srv.qty,
-        srv.uom,
-        srv.unitPrice,
-        srv.total,
-        srv.remark || '',
-        '',
-        srv.actualProgress,
-        `${srv.progressPercent.toFixed(2)}%`,
-        srv.isAddWork ? 'Add Work' : '',
-      ]);
-    });
-    jasaRows.push(['', `Total Harga Jasa ${site.name}`, '', '', '', '', '', site.totalJasa, '', 'Rata-rata Progress', '', `${site.progressPercent.toFixed(2)}%`]);
-    jasaRows.push([]);
-  });
-  const wsJasa = XLSX.utils.aoa_to_sheet(jasaRows);
-  XLSX.utils.book_append_sheet(wb, wsJasa, 'JASA');
-
-  // 3. MATERIAL SHEET
-  const matRows: any[][] = [];
-  calcSpk.sites.forEach((site) => {
-    matRows.push(['', 'Site Name', '', 'Material', 'Qty', 'Harga Satuan', 'Total']);
-    matRows.push(['', site.name]);
-    site.materials.forEach((mat) => {
-      matRows.push(['', '', '', mat.name, mat.qty, mat.unitPrice, mat.total]);
-    });
-    matRows.push(['', `Total Harga Material ${site.name}`, '', '', '', '', site.totalMaterial]);
-    matRows.push([]);
-  });
-  const wsMat = XLSX.utils.aoa_to_sheet(matRows);
-  XLSX.utils.book_append_sheet(wb, wsMat, 'MATERIAL');
-
-  // Write file buffer
-  const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
-  return out;
+  return { siteName, items };
 }
 
 /**
- * Generates a ready-to-use standard FTTH Cluster Excel Template (.xlsx)
- * Contains 4 standardized sheets: SUMMARY, JASA, MATERIAL, and ESTIMASI HARGA MATERIAL
+ * Parses a standalone MATERIAL Excel file into MaterialItem array
+ */
+export function parseMaterialItemsExcel(fileBuffer: ArrayBuffer): { siteName?: string; items: Omit<MaterialItem, 'id' | 'siteId'>[] } {
+  const workbook = XLSX.read(fileBuffer, { type: 'array' });
+  const sheetName = workbook.SheetNames[0];
+  const ws = workbook.Sheets[sheetName];
+  const data = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1 });
+
+  let siteName: string | undefined = undefined;
+  const items: Omit<MaterialItem, 'id' | 'siteId'>[] = [];
+
+  data.forEach((row) => {
+    if (!row || row.length === 0) return;
+
+    const colA = String(row[0] || '').trim();
+    const colB = String(row[1] || '').trim();
+    const colC = String(row[2] || '').trim();
+    const colD = row[3];
+    const colE = row[4];
+    const colF = row[5];
+
+    if (colA.toLowerCase().includes('site') && colB) {
+      siteName = colB;
+    }
+
+    let name = '';
+    let qty = 1;
+    let unitPrice = 0;
+
+    if (colB && !colB.toLowerCase().includes('material') && !colB.toLowerCase().includes('item') && !colB.toLowerCase().includes('site')) {
+      name = colB;
+      qty = Number(colC) || Number(colD) || 1;
+      unitPrice = Number(colE) || Number(colD) || Number(colF) || 0;
+    } else if (colC && !colC.toLowerCase().includes('material') && !colC.toLowerCase().includes('item')) {
+      name = colC;
+      qty = Number(colD) || 1;
+      unitPrice = Number(colE) || 0;
+    }
+
+    if (name && name.length >= 3 && !name.toLowerCase().includes('total')) {
+      items.push({
+        name,
+        qty: qty || 1,
+        unitPrice: unitPrice || 0,
+      });
+    }
+  });
+
+  return { siteName, items };
+}
+
+/**
+ * Generates standalone Template Excel for JASA MANDOR (.xlsx)
+ */
+export function generateJasaTemplate(): ArrayBuffer {
+  const wb = XLSX.utils.book_new();
+
+  const jasaRows: any[][] = [
+    ['TEMPLATE SOW & TARIF JASA MANDOR BORONGAN FTTH'],
+    ['PT INDOTEK BUANA KARYA - DEPARTEMEN ESTIMASI & OPERASIONAL'],
+    [],
+    ['Site / Rute Target:', 'PULLING DISTRIBUSI CLUSTER FTTH'],
+    ['Mandor Lapangan:', 'Mandor Borongan Terpilih'],
+    [],
+    ['No', 'Deskripsi Item Pekerjaan Jasa', 'Qty / Volume', 'Satuan (UOM)', 'Tarif Acuan Mandor (Rp)', 'Total Biaya Jasa (Rp)', 'Remark / Catatan Lapangan'],
+    [1, 'Digging Hole / Gali Lubang Tiang 7m', 50, 'Titik', 35000, 1750000, 'Kedalaman 100-120cm tanah standar'],
+    [2, 'Erection / Tanam Tiang Besi 7m 3 Inch', 30, 'Set', 120000, 3600000, 'Termasuk cor semen & aksesoris'],
+    [3, 'Erection / Tanam Tiang Besi 7m 2.5 Inch', 20, 'Set', 100000, 2000000, 'Tiang distribusi span pendek'],
+    [4, 'Penarikan Kabel Udara ADSS / Fig-8 24 Core', 2500, 'Meter', 2500, 6250000, 'Span tiang ke tiang, incl. tensioning'],
+    [5, 'Pemasangan FAT Aerial 1:8 / 1:16', 16, 'Unit', 150000, 2400000, 'FAT Aerial pada tiang distribusi'],
+    [6, 'Pemasangan FDT Outdoor 48 / 96 Core', 1, 'Unit', 977500, 977500, 'FDT Pole Mounting incl. grounding'],
+    [7, 'Splicing & Core Management per Core', 48, 'Core', 25000, 1200000, 'Splicing FO mesin fusi + tray'],
+    [8, 'OTDR Testing, Power Meter & Document QC', 1, 'Lot', 500000, 500000, 'Laporan kurva OTDR & foto BAST'],
+    [],
+    ['', 'PETUNJUK PENGISIAN:'],
+    ['', '1. Kolom "Deskripsi Item Pekerjaan Jasa", "Qty", "Satuan", dan "Tarif Acuan Mandor" wajib diisi.'],
+    ['', '2. Gunakan satuan: Meter, Titik, Set, Unit, Core, atau Lot.'],
+    ['', '3. File ini dapat langsung diimport ke tab Sheet Jasa Mandor pada aplikasi.'],
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(jasaRows);
+  XLSX.utils.book_append_sheet(wb, ws, 'JASA_MANDOR');
+
+  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+}
+
+/**
+ * Generates standalone Template Excel for MATERIAL AKSESORIS (.xlsx)
+ */
+export function generateMaterialTemplate(): ArrayBuffer {
+  const wb = XLSX.utils.book_new();
+
+  const matRows: any[][] = [
+    ['TEMPLATE DAFTAR KEBUTUHAN MATERIAL AKSESORIS FTTH'],
+    ['PT INDOTEK BUANA KARYA - DEPARTEMEN PROCUREMENT & LOGISTIK'],
+    [],
+    ['Site / Alokasi:', 'DISTRIBUSI CLUSTER FTTH'],
+    [],
+    ['No', 'Nama Material Aksesoris', 'Qty / Kebutuhan', 'Satuan (UOM)', 'Estimasi Harga Satuan (Rp)', 'Total Estimasi (Rp)', 'Rekomendasi Toko / Catatan'],
+    [1, 'Dead End Fitting 24 Core (Wedge Clamp)', 48, 'Pcs', 18500, 888000, 'Toko Mitra Mandiri FO'],
+    [2, 'Suspension Clamp FO ADSS', 15, 'Pcs', 15000, 225000, 'Toko Mitra Mandiri FO'],
+    [3, 'Pole Clamp 3 Inch + Baut Mur', 30, 'Set', 24000, 720000, 'Pabrikasi Tiang'],
+    [4, 'Pole Clamp 2.5 Inch + Baut Mur', 20, 'Set', 22000, 440000, 'Pabrikasi Tiang'],
+    [5, 'Stainless Steel Plat Belt (Bandit) 20mm', 4, 'Roll', 285000, 1140000, 'Roll 30 meter'],
+    [6, 'Stopping Buckle Stainless (Pcs)', 150, 'Pcs', 2500, 375000, 'Kemasan pack'],
+    [7, 'Slack Hanger FO (Gantungan Kabel)', 12, 'Pcs', 45000, 540000, 'Galvanized outdoor'],
+    [8, 'Sling Wire Galvanized 3mm', 400, 'Meter', 5450, 2180000, 'Tembakan antar tiang panjang'],
+    [9, 'Guy Grip / Preformed Dead End 3mm', 30, 'Pcs', 8500, 255000, 'Outdoor heavy duty'],
+    [10, 'Protection Sleeve Core 60mm', 100, 'Pcs', 650, 65000, 'Pelindung splicing fusion'],
+    [],
+    ['', 'PETUNJUK PENGISIAN:'],
+    ['', '1. Kolom "Nama Material Aksesoris", "Qty", dan "Estimasi Harga Satuan" wajib diisi.'],
+    ['', '2. File ini dapat langsung diimport ke tab Sheet Material pada aplikasi untuk membuat PO Belanja.'],
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(matRows);
+  XLSX.utils.book_append_sheet(wb, ws, 'MATERIAL_AKSESORIS');
+
+  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+}
+
+/**
+ * Generates a full 4-sheet FTTH Cluster Excel Template (.xlsx)
  */
 export function generateExcelTemplate(): ArrayBuffer {
   const wb = XLSX.utils.book_new();
@@ -453,7 +512,120 @@ export function generateExcelTemplate(): ArrayBuffer {
   const wsEst = XLSX.utils.aoa_to_sheet(estRows);
   XLSX.utils.book_append_sheet(wb, wsEst, 'ESTIMASI HARGA MATERIAL');
 
+  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+}
+
+/**
+ * Exports calculated SPK to Excel Workbook buffer
+ */
+export function exportSPKToExcel(calcSpk: CalculatedSPK): any {
+  const wb = XLSX.utils.book_new();
+
+  // 1. SUMMARY SHEET
+  const summaryRows: any[][] = [
+    ['', 'SUMMARY ESTIMASI BIAYA & MARGIN CLUSTER FTTH', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+    ['', 'Vendor Utama', 'Nomor SPK', 'Site Name', 'Nilai PO Vendor', 'Eksternal', '', '', '', '', '', 'Progress', 'Payment Mandor', '', '', '', 'Margin', ''],
+    ['', '', '', '', '', 'Jasa Mandor', '% Jasa', 'Material', '% Material', 'Jumlah', '% Eksternal', '', 'Term 1 (30%)', 'Term 2', 'Term 3', 'Pending Payment', 'Margin (Rp)', 'Margin (%)'],
+  ];
+
+  calcSpk.sites.forEach((site) => {
+    summaryRows.push([
+      '',
+      calcSpk.vendorName,
+      calcSpk.spkNumber,
+      site.name,
+      site.poAmount,
+      site.totalJasa,
+      `${site.jasaRatio.toFixed(2)}%`,
+      site.totalMaterial,
+      `${site.materialRatio.toFixed(2)}%`,
+      site.totalEksternal,
+      `${site.costRatio.toFixed(2)}%`,
+      `${site.progressPercent.toFixed(2)}%`,
+      site.term1Amount,
+      site.term2Amount,
+      site.term3Amount,
+      site.pendingPayment,
+      site.marginRp,
+      `${site.marginPercent.toFixed(2)}%`,
+    ]);
+  });
+
+  // Total summary row
+  const spkJasaRatio = calcSpk.totalPO > 0 ? (calcSpk.totalJasa / calcSpk.totalPO) * 100 : 0;
+  const spkMatRatio = calcSpk.totalPO > 0 ? (calcSpk.totalMaterial / calcSpk.totalPO) * 100 : 0;
+
+  summaryRows.push([
+    '',
+    `Jumlah ${calcSpk.sites.length} Site`,
+    '',
+    '',
+    calcSpk.totalPO,
+    calcSpk.totalJasa,
+    `${spkJasaRatio.toFixed(2)}%`,
+    calcSpk.totalMaterial,
+    `${spkMatRatio.toFixed(2)}%`,
+    calcSpk.totalEksternal,
+    `${calcSpk.costRatio.toFixed(2)}%`,
+    `${calcSpk.avgProgress.toFixed(2)}%`,
+    calcSpk.totalPaid,
+    0,
+    0,
+    calcSpk.pendingPayment,
+    calcSpk.marginRp,
+    `${calcSpk.marginPercent.toFixed(2)}%`,
+  ]);
+
+  // Add notes & logs
+  summaryRows.push([]);
+  summaryRows.push(['', 'Catatan / Notes:']);
+  calcSpk.notes.forEach((n) => summaryRows.push(['', '', n]));
+
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'SUMMARY');
+
+  // 2. JASA SHEET
+  const jasaRows: any[][] = [];
+  calcSpk.sites.forEach((site) => {
+    jasaRows.push(['', 'Site Name', '', 'Item', 'Qty', 'UOM', 'Harga Mitra', 'Total Mitra', 'Remark Mitra', '', 'Actual Progres', 'Persentase Progress', 'Keterangan']);
+    jasaRows.push(['', site.name]);
+    site.services.forEach((srv) => {
+      jasaRows.push([
+        '',
+        '',
+        '',
+        srv.name,
+        srv.qty,
+        srv.uom,
+        srv.unitPrice,
+        srv.total,
+        srv.remark || '',
+        '',
+        srv.actualProgress,
+        `${srv.progressPercent.toFixed(2)}%`,
+        srv.isAddWork ? 'Add Work' : '',
+      ]);
+    });
+    jasaRows.push(['', `Total Harga Jasa ${site.name}`, '', '', '', '', '', site.totalJasa, '', 'Rata-rata Progress', '', `${site.progressPercent.toFixed(2)}%`]);
+    jasaRows.push([]);
+  });
+  const wsJasa = XLSX.utils.aoa_to_sheet(jasaRows);
+  XLSX.utils.book_append_sheet(wb, wsJasa, 'JASA');
+
+  // 3. MATERIAL SHEET
+  const matRows: any[][] = [];
+  calcSpk.sites.forEach((site) => {
+    matRows.push(['', 'Site Name', '', 'Material', 'Qty', 'Harga Satuan', 'Total']);
+    matRows.push(['', site.name]);
+    site.materials.forEach((mat) => {
+      matRows.push(['', '', '', mat.name, mat.qty, mat.unitPrice, mat.total]);
+    });
+    matRows.push(['', `Total Harga Material ${site.name}`, '', '', '', '', site.totalMaterial]);
+    matRows.push([]);
+  });
+  const wsMat = XLSX.utils.aoa_to_sheet(matRows);
+  XLSX.utils.book_append_sheet(wb, wsMat, 'MATERIAL');
+
   const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
   return out;
 }
-
