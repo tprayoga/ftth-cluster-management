@@ -701,14 +701,14 @@ export const ClusterDetailView: React.FC = () => {
                     </select>
                   </div>
 
-                  {/* Cetak SPK Mandor Button */}
+                  {/* Download SPK Mandor Button */}
                   <button
                     onClick={() => setSpkMandorSite(site)}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-sky-600 dark:hover:bg-sky-400 transition-all shadow-sm"
-                    title="Cetak Work Order resmi untuk Mandor Lapangan"
+                    title="Download atau Cetak Dokumen SPK Mandor (Excel & PDF)"
                   >
-                    <Printer className="w-3.5 h-3.5" />
-                    <span>Cetak SPK Mandor</span>
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download SPK Mandor</span>
                   </button>
 
                   {/* Request Pembayaran Termin ke Finance */}

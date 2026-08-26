@@ -3,7 +3,8 @@
 import React from 'react';
 import { CalculatedSite, CalculatedSPK } from '@/types';
 import { formatIDR } from '@/lib/calculations';
-import { Printer, X, Shield, FileCheck2, User, MapPin, Calendar, HardHat } from 'lucide-react';
+import { downloadSPKMandorFile } from '@/lib/excelParser';
+import { Download, Printer, X, Shield, FileCheck2, User, MapPin, Calendar, HardHat } from 'lucide-react';
 
 interface SpkMandorModalProps {
   isOpen: boolean;
@@ -22,6 +23,10 @@ export const SpkMandorModal: React.FC<SpkMandorModalProps> = ({
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadExcel = () => {
+    downloadSPKMandorFile(spk, site);
   };
 
   const spkMandorNo = `SPK-MANDOR/${spk.clusterName.replace(/[^A-Z0-9]/gi, '')}/${site.id.slice(-4).toUpperCase()}/${new Date().getFullYear()}`;
@@ -47,8 +52,17 @@ export const SpkMandorModal: React.FC<SpkMandorModalProps> = ({
 
           <div className="flex items-center gap-2">
             <button
+              onClick={handleDownloadExcel}
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20 active:scale-95 transition-all"
+              title="Download Dokumen SPK Mandor dalam format Excel (.xlsx)"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download Excel (.xlsx)</span>
+            </button>
+            <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-sky-600 hover:bg-sky-500 text-white shadow-md shadow-sky-600/20"
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-sky-600 hover:bg-sky-500 text-white shadow-md shadow-sky-600/20 active:scale-95 transition-all"
+              title="Cetak atau Simpan sebagai PDF"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Cetak / Save PDF</span>

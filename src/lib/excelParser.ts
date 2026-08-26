@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { SPK, Site, ServiceItem, MaterialItem, PriceCatalogItem, CalculatedSPK } from '@/types';
+import { SPK, Site, ServiceItem, MaterialItem, PriceCatalogItem, CalculatedSPK, CalculatedSite } from '@/types';
 
 /**
  * Parses an FTTH Cluster Excel workbook (.xlsx) into an SPK data structure
@@ -629,3 +629,85 @@ export function exportSPKToExcel(calcSpk: CalculatedSPK): any {
   const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
   return out;
 }
+
+/**
+ * Exports an official SPK Mandor Work Order to Excel (.xlsx)
+ */
+export function exportSPKMandorToExcel(spk: CalculatedSPK, site: CalculatedSite): ArrayBuffer {
+  const wb = XLSX.utils.book_new();
+  const spkMandorNo = `SPK-MANDOR/${spk.clusterName.replace(/[^A-Z0-9]/gi, '')}/${site.id.slice(-4).toUpperCase()}/${new Date().getFullYear()}`;
+
+  const rows: any[][] = [
+    ['PT INDOTEK BUANA KARYA'],
+    ['SURAT PERINTAH KERJA (SPK) MANDOR / WORK ORDER'],
+    [],
+    ['Nomor SPK Mandor', spkMandorNo],
+    ['Nama Cluster', spk.clusterName],
+    ['Site / Ruas', site.name],
+    ['Tipe Pekerjaan (SOW)', site.sowType],
+    ['Mandor Bertugas', site.mandorName || 'Mandor Lapangan'],
+    ['Tanggal Terbit', new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })],
+    ['Target Selesai', spk.targetCompletionDate || '30 Hari Kalender'],
+    [],
+    ['RINCIAN ITEM PEKERJAAN & TARIF JASA MANDOR'],
+    ['No', 'Item Pekerjaan', 'Qty Target', 'Satuan', 'Tarif Mandor (Rp)', 'Total Biaya (Rp)', 'Instruksi / Catatan Teknis'],
+  ];
+
+  site.services.forEach((srv, idx) => {
+    rows.push([
+      idx + 1,
+      srv.name,
+      srv.qty,
+      srv.uom,
+      srv.unitPrice,
+      srv.total,
+      srv.remark || '-',
+    ]);
+  });
+
+  rows.push([]);
+  rows.push(['', '', '', '', 'TOTAL JASA MANDOR', site.totalJasa]);
+  rows.push([]);
+  rows.push(['SKEMA TERMIN PEMBAYARAN:']);
+  rows.push(['1. Termin 1 (DP 30%) saat mobilisasi tim']);
+  rows.push(['2. Termin 2 (Progress 40%) saat fisik mencapai 50%+']);
+  rows.push(['3. Termin 3 (Pelunasan 30%) setelah rekonsiliasi & BAST']);
+  rows.push([]);
+  rows.push(['Diterbitkan oleh:', '', '', 'Diterima oleh (Mandor):']);
+  rows.push(['PT INDOTEK BUANA KARYA', '', '', site.mandorName || 'Mandor Lapangan']);
+  rows.push([]);
+  rows.push([]);
+  rows.push(['( Project Manager )', '', '', `( ${site.mandorName || 'Mandor'} )`]);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [
+    { wch: 6 },
+    { wch: 40 },
+    { wch: 12 },
+    { wch: 10 },
+    { wch: 18 },
+    { wch: 20 },
+    { wch: 35 },
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'SPK MANDOR');
+  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+}
+
+/**
+ * Trigger direct download of SPK Mandor Excel file in browser
+ */
+export function downloadSPKMandorFile(spk: CalculatedSPK, site: CalculatedSite) {
+  const buffer = exportSPKMandorToExcel(spk, site);
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const cleanSiteName = site.name.replace(/[^A-Z0-9]/gi, '_').slice(0, 30);
+  a.download = `SPK_MANDOR_${cleanSiteName}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
