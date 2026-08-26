@@ -88,6 +88,7 @@ export const ClusterDetailView: React.FC = () => {
 
   // Add Site Modal state
   const [showAddSiteModal, setShowAddSiteModal] = useState(false);
+  const [newSiteSpkNumber, setNewSiteSpkNumber] = useState('');
   const [newSiteName, setNewSiteName] = useState('');
   const [newSiteSowType, setNewSiteSowType] = useState<'Distribusi' | 'Subfeeder' | 'Feeder' | 'Drop' | 'Other'>('Distribusi');
   const [newSitePoAmount, setNewSitePoAmount] = useState<string | number>('');
@@ -491,6 +492,7 @@ export const ClusterDetailView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
+                  setNewSiteSpkNumber(activeSpk.spkNumber || '');
                   setNewSiteName('');
                   setNewSiteSowType('Distribusi');
                   setNewSitePoAmount('');
@@ -543,8 +545,8 @@ export const ClusterDetailView: React.FC = () => {
                       <td className="p-3 font-sans font-semibold text-slate-800 dark:text-slate-200">
                         {activeSpk.vendorName}
                       </td>
-                      <td className="p-3 font-mono text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[140px]" title={activeSpk.spkNumber}>
-                        {activeSpk.spkNumber.split('/')[0]}...
+                      <td className="p-3 font-mono text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[140px]" title={site.spkNumber || activeSpk.spkNumber}>
+                        {(site.spkNumber || activeSpk.spkNumber).split('/')[0]}...
                       </td>
                       <td className="p-3 font-sans font-bold text-slate-900 dark:text-white max-w-xs">
                         {site.name}
@@ -1921,6 +1923,7 @@ export const ClusterDetailView: React.FC = () => {
                 }
                 const selectedMandor = mandors.find((m) => m.id === newSiteMandorId);
                 addSite(activeSpk.id, {
+                  spkNumber: newSiteSpkNumber.trim() || activeSpk.spkNumber,
                   name: newSiteName.trim(),
                   sowType: newSiteSowType,
                   poAmount: Number(newSitePoAmount) || 0,
@@ -1928,26 +1931,27 @@ export const ClusterDetailView: React.FC = () => {
                   mandorName: selectedMandor?.name || 'Mandor Lapangan',
                 });
                 setShowAddSiteModal(false);
+                setNewSiteSpkNumber('');
                 setNewSiteName('');
                 setNewSitePoAmount('');
               }}
               className="space-y-4 text-xs"
             >
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Nama Site / Ruas Pekerjaan <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="mis. PULLING SUBFEEDER RUAS JALAN PEMALANG"
-                  value={newSiteName}
-                  onChange={(e) => setNewSiteName(e.target.value)}
-                  className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-sky-500 focus:outline-none"
-                />
-              </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Nomor SPK <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="mis. SPK/2026/08/TA-PEMALANG-001"
+                    value={newSiteSpkNumber}
+                    onChange={(e) => setNewSiteSpkNumber(e.target.value)}
+                    className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-medium focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  />
+                </div>
+
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                     Tipe Scope (SOW)
@@ -1964,7 +1968,23 @@ export const ClusterDetailView: React.FC = () => {
                     <option value="Other">Other / Khusus</option>
                   </select>
                 </div>
+              </div>
 
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Nama Site / Ruas Pekerjaan <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="mis. PULLING SUBFEEDER RUAS JALAN PEMALANG"
+                  value={newSiteName}
+                  onChange={(e) => setNewSiteName(e.target.value)}
+                  className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                     Nilai PO dari Vendor (Rp)

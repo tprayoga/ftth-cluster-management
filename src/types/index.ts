@@ -316,6 +316,7 @@ export interface PaymentTerm {
 export interface Site {
   id: string;
   spkId: string;
+  spkNumber?: string;
   name: string;
   sowType: 'Distribusi' | 'Subfeeder' | 'Feeder' | 'Drop' | 'Other';
   poAmount: number; // Nilai PO dari Vendor
@@ -376,6 +377,7 @@ export interface CalculatedMaterialItem extends MaterialItem {
 export interface CalculatedSite {
   id: string;
   spkId: string;
+  spkNumber?: string;
   name: string;
   sowType: string;
   poAmount: number;

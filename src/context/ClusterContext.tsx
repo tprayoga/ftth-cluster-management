@@ -127,6 +127,7 @@ interface ClusterContextType {
       name: string;
       sowType: 'Distribusi' | 'Subfeeder' | 'Feeder' | 'Drop' | 'Other';
       poAmount: number;
+      spkNumber?: string;
       mandorId?: string;
       mandorName?: string;
     }
@@ -427,14 +428,17 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
       name: string;
       sowType: 'Distribusi' | 'Subfeeder' | 'Feeder' | 'Drop' | 'Other';
       poAmount: number;
+      spkNumber?: string;
       mandorId?: string;
       mandorName?: string;
     }
   ) => {
+    const targetSpk = spks.find((s) => s.id === spkId);
     const siteId = `site-${Date.now()}`;
     const newSite: Site = {
       id: siteId,
       spkId,
+      spkNumber: siteData.spkNumber || targetSpk?.spkNumber || '',
       name: siteData.name,
       sowType: siteData.sowType,
       poAmount: siteData.poAmount || 0,
