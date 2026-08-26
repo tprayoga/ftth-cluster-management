@@ -507,36 +507,36 @@ export const ClusterDetailView: React.FC = () => {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
+              <table className="w-full text-left text-xs border-collapse min-w-[1450px]">
                 <thead>
                   <tr className="bg-slate-100/80 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-800 text-center">
-                    <th colSpan={4} className="p-2 border-r border-slate-200 dark:border-slate-800 text-left">Informasi Dasar & Mandor</th>
-                    <th className="p-2 border-r border-slate-200 dark:border-slate-800">PO Vendor</th>
-                    <th colSpan={5} className="p-2 border-r border-slate-200 dark:border-slate-800 bg-sky-500/5">Biaya Eksternal (Jasa Mandor, Mat, Permit)</th>
-                    <th className="p-2 border-r border-slate-200 dark:border-slate-800">Progress</th>
-                    <th colSpan={4} className="p-2 border-r border-slate-200 dark:border-slate-800 bg-indigo-500/5">Payment Mandor</th>
-                    <th colSpan={2} className="p-2 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400">Margin</th>
-                    <th className="p-2 border-l border-slate-200 dark:border-slate-800 text-center w-14">Aksi</th>
+                    <th colSpan={4} className="p-2.5 border-r border-slate-200 dark:border-slate-800 text-left whitespace-nowrap">Informasi Dasar & Mandor</th>
+                    <th className="p-2.5 border-r border-slate-200 dark:border-slate-800 whitespace-nowrap">PO Vendor</th>
+                    <th colSpan={5} className="p-2.5 border-r border-slate-200 dark:border-slate-800 bg-sky-500/5 whitespace-nowrap">Biaya Eksternal (Jasa Mandor, Mat, Permit)</th>
+                    <th className="p-2.5 border-r border-slate-200 dark:border-slate-800 whitespace-nowrap">Progress</th>
+                    <th colSpan={4} className="p-2.5 border-r border-slate-200 dark:border-slate-800 bg-indigo-500/5 whitespace-nowrap">Payment Mandor</th>
+                    <th colSpan={2} className="p-2.5 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400 whitespace-nowrap">Margin</th>
+                    <th className="p-2.5 border-l border-slate-200 dark:border-slate-800 text-center w-14 whitespace-nowrap">Aksi</th>
                   </tr>
                   <tr className="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800 text-right">
-                    <th className="p-3 text-left">Vendor</th>
-                    <th className="p-3 text-left">Nomor SPK</th>
-                    <th className="p-3 text-left">Site Name</th>
-                    <th className="p-3 text-left text-sky-600 dark:text-sky-400">Mandor Bertugas</th>
-                    <th className="p-3 font-mono">Nilai PO</th>
-                    <th className="p-3 bg-sky-500/5">Jasa Mandor</th>
-                    <th className="p-3 bg-sky-500/5">% Jasa</th>
-                    <th className="p-3 bg-sky-500/5">Material</th>
-                    <th className="p-3 bg-sky-500/5">Permit</th>
-                    <th className="p-3 bg-sky-500/10 font-black">Total Cost</th>
-                    <th className="p-3 text-center">Progress %</th>
-                    <th className="p-3 bg-indigo-500/5">Term 1 (30%)</th>
-                    <th className="p-3 bg-indigo-500/5">Term 2</th>
-                    <th className="p-3 bg-indigo-500/5">Term 3</th>
-                    <th className="p-3 bg-indigo-500/10 text-rose-500">Pending</th>
-                    <th className="p-3 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400">Margin (Rp)</th>
-                    <th className="p-3 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-black text-center">Margin %</th>
-                    <th className="p-3 text-center border-l border-slate-200 dark:border-slate-800">Aksi</th>
+                    <th className="p-3 text-left whitespace-nowrap min-w-[90px]">Vendor</th>
+                    <th className="p-3 text-left whitespace-nowrap min-w-[160px]">Nomor SPK</th>
+                    <th className="p-3 text-left whitespace-nowrap min-w-[240px]">Site Name</th>
+                    <th className="p-3 text-left text-sky-600 dark:text-sky-400 whitespace-nowrap min-w-[180px]">Mandor Bertugas</th>
+                    <th className="p-3 font-mono whitespace-nowrap min-w-[120px]">Nilai PO</th>
+                    <th className="p-3 bg-sky-500/5 whitespace-nowrap min-w-[110px]">Jasa Mandor</th>
+                    <th className="p-3 bg-sky-500/5 whitespace-nowrap min-w-[70px] text-center">% Jasa</th>
+                    <th className="p-3 bg-sky-500/5 whitespace-nowrap min-w-[110px]">Material</th>
+                    <th className="p-3 bg-sky-500/5 whitespace-nowrap min-w-[90px]">Permit</th>
+                    <th className="p-3 bg-sky-500/10 font-black whitespace-nowrap min-w-[120px]">Total Cost</th>
+                    <th className="p-3 text-center whitespace-nowrap min-w-[90px]">Progress %</th>
+                    <th className="p-3 bg-indigo-500/5 whitespace-nowrap min-w-[110px]">Term 1 (30%)</th>
+                    <th className="p-3 bg-indigo-500/5 whitespace-nowrap min-w-[100px]">Term 2</th>
+                    <th className="p-3 bg-indigo-500/5 whitespace-nowrap min-w-[100px]">Term 3</th>
+                    <th className="p-3 bg-indigo-500/10 text-rose-500 whitespace-nowrap min-w-[110px]">Pending</th>
+                    <th className="p-3 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400 whitespace-nowrap min-w-[120px]">Margin (Rp)</th>
+                    <th className="p-3 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-black text-center whitespace-nowrap min-w-[90px]">Margin %</th>
+                    <th className="p-3 text-center border-l border-slate-200 dark:border-slate-800 whitespace-nowrap w-14">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono">
@@ -781,20 +781,20 @@ export const ClusterDetailView: React.FC = () => {
 
               {/* Jasa Table */}
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
+                <table className="w-full text-left text-xs border-collapse min-w-[1300px]">
                   <thead>
                     <tr className="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
-                      <th className="p-3 w-12 text-center">#</th>
-                      <th className="p-3 min-w-[280px]">Item Pekerjaan</th>
-                      <th className="p-3 text-right w-24">Qty Target</th>
-                      <th className="p-3 text-center w-20">Satuan</th>
-                      <th className="p-3 text-right w-32">Tarif Mandor</th>
-                      <th className="p-3 text-right w-36">Total Biaya Mandor</th>
-                      <th className="p-3 min-w-[180px]">Remark / Catatan Lapangan</th>
-                      <th className="p-3 text-right w-28 bg-indigo-50/50 dark:bg-indigo-950/20">Actual Progres</th>
-                      <th className="p-3 text-center w-36 bg-indigo-50/50 dark:bg-indigo-950/20">Progres %</th>
-                      <th className="p-3 text-center w-28">Status</th>
-                      <th className="p-3 text-center w-16">Aksi</th>
+                      <th className="p-3 w-12 text-center whitespace-nowrap">#</th>
+                      <th className="p-3 min-w-[320px] whitespace-nowrap">Item Pekerjaan</th>
+                      <th className="p-3 text-right min-w-[120px] whitespace-nowrap">Qty Target</th>
+                      <th className="p-3 text-center min-w-[90px] whitespace-nowrap">Satuan</th>
+                      <th className="p-3 text-right min-w-[140px] whitespace-nowrap">Tarif Mandor</th>
+                      <th className="p-3 text-right min-w-[160px] whitespace-nowrap">Total Biaya Mandor</th>
+                      <th className="p-3 min-w-[240px] whitespace-nowrap">Remark / Catatan Lapangan</th>
+                      <th className="p-3 text-right min-w-[120px] bg-indigo-50/50 dark:bg-indigo-950/20 whitespace-nowrap">Actual Progres</th>
+                      <th className="p-3 text-center min-w-[140px] bg-indigo-50/50 dark:bg-indigo-950/20 whitespace-nowrap">Progres %</th>
+                      <th className="p-3 text-center min-w-[100px] whitespace-nowrap">Status</th>
+                      <th className="p-3 text-center w-16 whitespace-nowrap">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono">
@@ -841,7 +841,7 @@ export const ClusterDetailView: React.FC = () => {
                             className="spreadsheet-cell-input text-right text-slate-700 dark:text-slate-300"
                           />
                         </td>
-                        <td className="p-3 text-right font-bold text-slate-900 dark:text-white">
+                        <td className="p-3 text-right font-bold text-slate-900 dark:text-white whitespace-nowrap">
                           {formatIDR(srv.total)}
                         </td>
                         <td className="p-3 font-sans">
@@ -865,9 +865,9 @@ export const ClusterDetailView: React.FC = () => {
                             className="spreadsheet-cell-input text-right font-black text-indigo-600 dark:text-indigo-400 bg-white/60 dark:bg-slate-900/60 border border-indigo-200 dark:border-indigo-800"
                           />
                         </td>
-                        <td className="p-3 text-center bg-indigo-50/30 dark:bg-indigo-950/20 font-bold">
+                        <td className="p-3 text-center bg-indigo-50/30 dark:bg-indigo-950/20 font-bold whitespace-nowrap">
                           <div className="flex items-center gap-2 justify-center">
-                            <span className="text-xs text-indigo-600 dark:text-indigo-400">
+                            <span className="text-xs text-indigo-600 dark:text-indigo-400 font-mono">
                               {formatPercent(srv.progressPercent, 1)}
                             </span>
                             <div className="w-12 bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
@@ -880,7 +880,7 @@ export const ClusterDetailView: React.FC = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="p-3 text-center font-sans">
+                        <td className="p-3 text-center font-sans whitespace-nowrap">
                           {srv.isAddWork ? (
                             <span className="px-2 py-0.5 text-[10px] font-black uppercase rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 animate-pulse">
                               Add Work
@@ -897,10 +897,10 @@ export const ClusterDetailView: React.FC = () => {
                             <span className="text-slate-400 text-[11px]">-</span>
                           )}
                         </td>
-                        <td className="p-3 text-center font-sans">
+                        <td className="p-3 text-center font-sans whitespace-nowrap">
                           <button
                             onClick={() => deleteServiceItem(activeSpk.id, site.id, srv.id)}
-                            className="p-1 rounded text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
                             title="Hapus baris"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -1021,17 +1021,17 @@ export const ClusterDetailView: React.FC = () => {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
+                <table className="w-full text-left text-xs border-collapse min-w-[1100px]">
                   <thead>
                     <tr className="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
-                      <th className="p-3 w-12 text-center">#</th>
-                      <th className="p-3 min-w-[280px]">Nama Material</th>
-                      <th className="p-3 text-right w-28">Qty</th>
-                      <th className="p-3 text-right w-36">Harga Satuan (Aktual)</th>
-                      <th className="p-3 text-right w-36">Total Biaya</th>
-                      <th className="p-3 text-right w-36 text-slate-400">Harga Acuan Katalog</th>
-                      <th className="p-3 text-center w-28">Variansi</th>
-                      <th className="p-3 text-center w-16">Aksi</th>
+                      <th className="p-3 w-12 text-center whitespace-nowrap">#</th>
+                      <th className="p-3 min-w-[320px] whitespace-nowrap">Nama Material</th>
+                      <th className="p-3 text-right min-w-[100px] whitespace-nowrap">Qty</th>
+                      <th className="p-3 text-right min-w-[150px] whitespace-nowrap">Harga Satuan (Aktual)</th>
+                      <th className="p-3 text-right min-w-[150px] whitespace-nowrap">Total Biaya</th>
+                      <th className="p-3 text-right min-w-[150px] text-slate-400 whitespace-nowrap">Harga Acuan Katalog</th>
+                      <th className="p-3 text-center min-w-[140px] whitespace-nowrap">Variansi</th>
+                      <th className="p-3 text-center w-16 whitespace-nowrap">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono">
@@ -1075,13 +1075,13 @@ export const ClusterDetailView: React.FC = () => {
                               className="spreadsheet-cell-input text-right font-semibold text-slate-800 dark:text-slate-200"
                             />
                           </td>
-                          <td className="p-3 text-right font-bold text-slate-900 dark:text-white">
+                          <td className="p-3 text-right font-bold text-slate-900 dark:text-white whitespace-nowrap">
                             {formatIDR(mat.total)}
                           </td>
-                          <td className="p-3 text-right text-slate-400">
+                          <td className="p-3 text-right text-slate-400 whitespace-nowrap">
                             {refPrice > 0 ? formatIDR(refPrice) : '-'}
                           </td>
-                          <td className="p-3 text-center font-sans">
+                          <td className="p-3 text-center font-sans whitespace-nowrap">
                             {refPrice > 0 ? (
                               diff < 0 ? (
                                 <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
@@ -1098,10 +1098,10 @@ export const ClusterDetailView: React.FC = () => {
                               <span className="text-slate-400 text-[10px]">-</span>
                             )}
                           </td>
-                          <td className="p-3 text-center font-sans">
+                          <td className="p-3 text-center font-sans whitespace-nowrap">
                             <button
                               onClick={() => deleteMaterialItem(activeSpk.id, site.id, mat.id)}
-                              className="p-1 rounded text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
                               title="Hapus baris"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -1168,18 +1168,18 @@ export const ClusterDetailView: React.FC = () => {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
+                <table className="w-full text-left text-xs border-collapse min-w-[1100px]">
                   <thead>
                     <tr className="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
-                      <th className="p-3 w-12 text-center">#</th>
-                      <th className="p-3 min-w-[240px]">Keterangan Izin / Koordinasi</th>
-                      <th className="p-3 w-40">Kategori</th>
-                      <th className="p-3 text-right w-36">Estimasi Biaya</th>
-                      <th className="p-3 text-right w-36">Biaya Aktual</th>
-                      <th className="p-3 w-32">Status Izin</th>
-                      <th className="p-3 w-36">PIC Sitac</th>
-                      <th className="p-3 min-w-[180px]">Catatan Lapangan</th>
-                      <th className="p-3 text-center w-16">Aksi</th>
+                      <th className="p-3 w-12 text-center whitespace-nowrap">#</th>
+                      <th className="p-3 min-w-[280px] whitespace-nowrap">Keterangan Izin / Koordinasi</th>
+                      <th className="p-3 min-w-[160px] whitespace-nowrap">Kategori</th>
+                      <th className="p-3 text-right min-w-[140px] whitespace-nowrap">Estimasi Biaya</th>
+                      <th className="p-3 text-right min-w-[140px] whitespace-nowrap">Biaya Aktual</th>
+                      <th className="p-3 min-w-[140px] whitespace-nowrap">Status Izin</th>
+                      <th className="p-3 min-w-[140px] whitespace-nowrap">PIC Sitac</th>
+                      <th className="p-3 min-w-[200px] whitespace-nowrap">Catatan Lapangan</th>
+                      <th className="p-3 text-center w-16 whitespace-nowrap">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono">
@@ -1297,14 +1297,14 @@ export const ClusterDetailView: React.FC = () => {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
+              <table className="w-full text-left text-xs border-collapse min-w-[900px]">
                 <thead>
                   <tr className="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
-                    <th className="p-3 w-12 text-center">#</th>
-                    <th className="p-3 min-w-[280px]">Nama Material</th>
-                    <th className="p-3 text-right w-32">Estimasi Qty Base</th>
-                    <th className="p-3 text-right w-44">Harga Acuan Satuan</th>
-                    <th className="p-3 text-right w-44">Estimasi Total</th>
+                    <th className="p-3 w-12 text-center whitespace-nowrap">#</th>
+                    <th className="p-3 min-w-[320px] whitespace-nowrap">Nama Material</th>
+                    <th className="p-3 text-right min-w-[140px] whitespace-nowrap">Estimasi Qty Base</th>
+                    <th className="p-3 text-right min-w-[160px] whitespace-nowrap">Harga Acuan Satuan</th>
+                    <th className="p-3 text-right min-w-[160px] whitespace-nowrap">Estimasi Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono">

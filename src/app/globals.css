@@ -105,9 +105,20 @@ code, kbd, samp, pre, .font-mono {
 .spreadsheet-cell-input {
   background: transparent;
   width: 100%;
-  border-radius: 4px;
-  padding: 4px 8px;
+  border-radius: 6px;
+  padding: 4px 6px;
   transition: all 0.15s ease;
+  min-width: 0;
+}
+
+/* Remove number spinner arrows for clean spreadsheet look */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
 }
 
 .spreadsheet-cell-input:focus {
@@ -120,3 +131,4 @@ code, kbd, samp, pre, .font-mono {
   background: #0f172a;
   box-shadow: 0 0 0 2px #38bdf8;
 }
+
