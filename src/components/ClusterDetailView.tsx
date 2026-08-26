@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useCluster } from '@/context/ClusterContext';
 import { formatIDR, formatPercent } from '@/lib/calculations';
+import { downloadSPKMandorFile } from '@/lib/excelParser';
 import { SpkMandorModal } from '@/components/SpkMandorModal';
 import { FinanceRequestModal } from '@/components/FinanceRequestModal';
 import { DailyProgressModal } from '@/components/DailyProgressModal';
@@ -701,11 +702,12 @@ export const ClusterDetailView: React.FC = () => {
                     </select>
                   </div>
 
-                  {/* Download SPK Mandor Button */}
+                  {/* Direct Download SPK Mandor Excel Button */}
                   <button
-                    onClick={() => setSpkMandorSite(site)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-sky-600 dark:hover:bg-sky-400 transition-all shadow-sm"
-                    title="Download atau Cetak Dokumen SPK Mandor (Excel & PDF)"
+                    type="button"
+                    onClick={() => downloadSPKMandorFile(activeSpk, site)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-sky-600 dark:hover:bg-sky-400 active:scale-95 transition-all shadow-sm"
+                    title="Download langsung file Excel SPK Mandor (.xlsx)"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Download SPK Mandor</span>
