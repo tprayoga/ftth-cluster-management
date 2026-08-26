@@ -73,15 +73,18 @@ export async function initDatabase() {
       END $$;
     `);
 
-    // 4. Check if seeding is required (where data IS NOT NULL)
-    const spkCountResult = await query<{ count: string }>(
-      'SELECT COUNT(*) as count FROM spks WHERE data IS NOT NULL'
+    // 4. Check if seeding is required (ONLY on first initialization, NOT when tables become empty by user deletion)
+    const initCheck = await query<{ key: string }>(
+      "SELECT key FROM app_settings WHERE key = 'app_initialized'"
     );
-    const count = parseInt(spkCountResult.rows[0]?.count || '0', 10);
 
-    if (count === 0) {
-      console.log('Database empty, performing initial data seeding...');
+    if (initCheck.rows.length === 0) {
+      console.log('First time setup: performing initial data seeding...');
       await seedDatabase();
+      await query(
+        `INSERT INTO app_settings (key, value, updated_at) VALUES ('app_initialized', 'true'::jsonb, CURRENT_TIMESTAMP)
+         ON CONFLICT (key) DO UPDATE SET value = 'true'::jsonb, updated_at = CURRENT_TIMESTAMP`
+      );
     }
   } catch (error) {
     console.error('Error during initDatabase:', error);
@@ -95,6 +98,11 @@ export async function seedDatabase() {
     `INSERT INTO app_settings (key, value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
      ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = CURRENT_TIMESTAMP`,
     ['approval_rules', JSON.stringify(DEFAULT_APPROVAL_RULES)]
+  );
+
+  await query(
+    `INSERT INTO app_settings (key, value, updated_at) VALUES ('app_initialized', 'true'::jsonb, CURRENT_TIMESTAMP)
+     ON CONFLICT (key) DO UPDATE SET value = 'true'::jsonb, updated_at = CURRENT_TIMESTAMP`
   );
 
   // Users
