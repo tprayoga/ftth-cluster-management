@@ -398,8 +398,62 @@ export const ClusterProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
 
-  const calculatedSPKs = spks.map(calculateSPK);
-  const portfolio = calculatePortfolio(spks);
+  // Sync spks with actual paymentRequests from Finance so site.paymentTerms and Summary table are always 100% accurate
+  const syncedSpks = React.useMemo(() => {
+    return spks.map((spk) => {
+      const updatedSites = (spk.sites || []).map((site) => {
+        const siteRequests = paymentRequests.filter(
+          (r) =>
+            (r.siteId === site.id || r.siteName?.toLowerCase().trim() === site.name.toLowerCase().trim()) &&
+            r.status === 'PAID' &&
+            r.type === 'TERMIN'
+        );
+
+        const totalJasa = (site.services || []).reduce((sum, s) => sum + (s.qty * s.unitPrice), 0);
+        const expectedT1 = Math.round(totalJasa * 0.3);
+        const expectedT2 = Math.round(totalJasa * 0.4);
+        const expectedT3 = Math.round(totalJasa * 0.3);
+
+        const baseTerms = site.paymentTerms && site.paymentTerms.length >= 3
+          ? site.paymentTerms
+          : [
+              { id: `${site.id}-t1`, siteId: site.id, termNumber: 1, percentage: 30, amount: expectedT1, isPaid: false, note: 'Termin 1 (DP)' },
+              { id: `${site.id}-t2`, siteId: site.id, termNumber: 2, percentage: 40, amount: expectedT2, isPaid: false, note: 'Termin 2 (Progress)' },
+              { id: `${site.id}-t3`, siteId: site.id, termNumber: 3, percentage: 30, amount: expectedT3, isPaid: false, note: 'Termin 3 (Pelunasan)' },
+            ];
+
+        const updatedTerms = baseTerms.map((term) => {
+          const paidReq = siteRequests.find((r) => r.termNumber === term.termNumber);
+          if (paidReq) {
+            return {
+              ...term,
+              amount: paidReq.requestedAmount || (term.termNumber === 1 ? expectedT1 : term.termNumber === 2 ? expectedT2 : expectedT3),
+              isPaid: true,
+              paidDate: paidReq.paidAt || term.paidDate,
+            };
+          }
+          const standardAmt = term.termNumber === 1 ? expectedT1 : term.termNumber === 2 ? expectedT2 : expectedT3;
+          return {
+            ...term,
+            amount: term.isPaid && term.amount > 0 ? term.amount : standardAmt,
+          };
+        });
+
+        return {
+          ...site,
+          paymentTerms: updatedTerms,
+        };
+      });
+
+      return {
+        ...spk,
+        sites: updatedSites,
+      };
+    });
+  }, [spks, paymentRequests]);
+
+  const calculatedSPKs = syncedSpks.map(calculateSPK);
+  const portfolio = calculatePortfolio(syncedSpks);
   const activeSpk = activeSpkId ? calculatedSPKs.find((s) => s.id === activeSpkId) || null : null;
 
   const addSPK = (newSpk: SPK) => {

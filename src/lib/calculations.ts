@@ -71,18 +71,31 @@ export function calculateSite(site: Site): CalculatedSite {
       ? physicalItems.reduce((sum, item) => sum + item.progressPercent, 0) / physicalItems.length
       : 0;
 
-  // Payment terms
+  // Payment terms (Standard 30% - 40% - 30%)
   const term1 = site.paymentTerms?.find((t) => t.termNumber === 1);
   const term2 = site.paymentTerms?.find((t) => t.termNumber === 2);
   const term3 = site.paymentTerms?.find((t) => t.termNumber === 3);
 
-  const term1Amount = term1 ? term1.amount : totalJasa * 0.3;
-  const term2Amount = term2 ? term2.amount : 0;
-  const term3Amount = term3 ? term3.amount : 0;
+  const expectedTerm1 = Math.round(totalJasa * 0.3);
+  const expectedTerm2 = Math.round(totalJasa * 0.4);
+  const expectedTerm3 = Math.round(totalJasa * 0.3);
 
-  const totalPaid = (site.paymentTerms || [])
-    .filter((t) => t.isPaid)
-    .reduce((sum, t) => sum + t.amount, 0);
+  const term1Amount = term1
+    ? (term1.amount > 0 ? term1.amount : expectedTerm1)
+    : expectedTerm1;
+
+  const term2Amount = term2
+    ? (term2.isPaid ? (term2.amount > 0 ? term2.amount : expectedTerm2) : (term2.amount > 0 ? term2.amount : 0))
+    : 0;
+
+  const term3Amount = term3
+    ? (term3.isPaid ? (term3.amount > 0 ? term3.amount : expectedTerm3) : (term3.amount > 0 ? term3.amount : 0))
+    : 0;
+
+  let totalPaid = 0;
+  if (term1?.isPaid) totalPaid += term1Amount;
+  if (term2?.isPaid) totalPaid += (term2Amount > 0 ? term2Amount : expectedTerm2);
+  if (term3?.isPaid) totalPaid += (term3Amount > 0 ? term3Amount : expectedTerm3);
 
   const pendingPayment = Math.max(0, totalJasa - totalPaid);
 
