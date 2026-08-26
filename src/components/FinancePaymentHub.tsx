@@ -29,6 +29,7 @@ export const FinancePaymentHub: React.FC = () => {
     mandors,
     updatePaymentRequestStatus,
     deletePaymentRequest,
+    deleteMandor,
     currentUser,
   } = useCluster();
 
@@ -183,13 +184,30 @@ export const FinancePaymentHub: React.FC = () => {
           {mandors.map((m) => (
             <div
               key={m.id}
-              className="p-4 rounded-xl glass-card border border-slate-200 dark:border-slate-800 space-y-2 text-xs"
+              className="p-4 rounded-xl glass-card border border-slate-200 dark:border-slate-800 space-y-2 text-xs relative group"
             >
-              <div className="flex items-start justify-between">
-                <strong className="text-slate-900 dark:text-white text-sm block">{m.name}</strong>
-                <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-500 font-mono">
-                  {m.teamSize} Orang
-                </span>
+              <div className="flex items-start justify-between gap-2">
+                <strong className="text-slate-900 dark:text-white text-sm block truncate flex-1">{m.name}</strong>
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-500 font-mono">
+                    {m.teamSize} Orang
+                  </span>
+
+                  {isSuperAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm(`Hapus data mandor "${m.name}" dari buku besar?`)) {
+                          deleteMandor(m.id);
+                        }
+                      }}
+                      className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                      title="Hapus Data Mandor (Khusus Super Admin)"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
               <p className="text-slate-400 text-[11px] truncate">{m.specialization} ({m.area})</p>
 
@@ -198,7 +216,7 @@ export const FinancePaymentHub: React.FC = () => {
                   <span>Bank: </span>
                   <strong className="text-slate-700 dark:text-slate-300 font-mono">{m.bankName} - {m.accountNumber}</strong>
                 </div>
-                <div className="text-[11px] text-slate-400">a.n. {m.accountHolder}</div>
+                <div className="text-[11px] text-slate-400 truncate">a.n. {m.accountHolder}</div>
               </div>
 
               <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between font-mono">
